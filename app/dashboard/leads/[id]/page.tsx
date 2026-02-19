@@ -22,10 +22,14 @@ export default async function LeadDetailPage({ params }: PageProps) {
   if (session.user.role === 'support') notFound();
   if (session.user.role === 'sales' && lead.assigned_to_user_id !== session.user.id) notFound();
 
+  const role = session.user.role;
+  const canAssign = role === 'admin' || role === 'manager';
+  const canEdit = role !== 'readonly';
+
   const [{ data: stages }, { data: tasks }, { data: tenantUsers }] = await Promise.all([
     supabase.from('pipeline_stages').select('id, name, order').eq('tenant_id', session.user.tenantId).order('order', { ascending: true }),
     supabase.from('tasks').select('*').eq('lead_id', id).order('due_at', { ascending: true, nullsFirst: false }),
-    (session.user.role === 'admin' || session.user.role === 'manager')
+    canAssign
       ? supabase.from('users').select('id, name, email').eq('tenant_id', session.user.tenantId)
       : { data: [] as { id: string; name: string | null; email: string }[] },
   ]);
@@ -36,9 +40,9 @@ export default async function LeadDetailPage({ params }: PageProps) {
       stages={stages ?? []}
       tasks={tasks ?? []}
       tenantUsers={tenantUsers ?? []}
-      role={session.user.role}
-      canAssign={session.user.role === 'admin' || session.user.role === 'manager'}
-      canEdit={session.user.role !== 'readonly' && session.user.role !== 'support'}
+      role={role}
+      canAssign={canAssign}
+      canEdit={canEdit}
     />
   );
 }

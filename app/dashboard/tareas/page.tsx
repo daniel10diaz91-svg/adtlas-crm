@@ -14,7 +14,7 @@ export default async function TareasPage() {
     .select('id, title, due_at, done, lead_id')
     .eq('tenant_id', session.user.tenantId)
     .order('due_at', { ascending: true, nullsFirst: false });
-  let tasks: Awaited<ReturnType<typeof supabase.from<'tasks'>>>['data'] = null;
+  let tasks: { id: string; title: string; due_at: string | null; done: boolean; lead_id: string | null }[] | null = null;
   if (role === 'sales') {
     const { data: myLeadIds } = await supabase
       .from('leads')
