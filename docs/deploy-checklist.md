@@ -19,7 +19,7 @@ Completar antes de considerar el deploy listo:
 | Comprobación | Dónde / cómo |
 |--------------|--------------|
 | **Migración aplicada** | En Supabase: `SELECT DISTINCT role FROM users;` debe incluir al menos `admin`, `sales` (y opcionalmente `manager`, `support`, `readonly`). |
-| **Variables de entorno** | En Vercel (o tu plataforma): `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (URL de producción). |
+| **Variables de entorno** | En Vercel: ver lista completa y pasos en [docs/vercel-setup.md](vercel-setup.md). |
 | **Build local** | En la raíz del proyecto: `npm run build` sin errores. |
 
 Si algo falla, corregir antes de desplegar.
