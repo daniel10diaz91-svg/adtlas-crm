@@ -1,5 +1,6 @@
 import { getSession } from '@/lib/session';
 import { createServiceClient } from '@/lib/supabase/service';
+import { getServerT } from '@/lib/i18n-server';
 import Link from 'next/link';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { LeadsChart } from '@/components/dashboard/LeadsChart';
@@ -8,6 +9,7 @@ import { RecentLeadsTable } from '@/components/dashboard/RecentLeadsTable';
 export default async function DashboardHome() {
   const session = await getSession();
   if (!session) return null;
+  const t = await getServerT();
 
   const supabase = createServiceClient();
   const tenantId = session.user.tenantId;
@@ -47,16 +49,18 @@ export default async function DashboardHome() {
 
   const showQuickActions = role !== 'readonly' && role !== 'support';
 
+  const userName = session.user?.name ?? session.user?.email ?? '';
+
   return (
     <div className="space-y-6">
       <p className="text-zinc-600">
-        Hola, {session.user?.name ?? session.user?.email}. Resumen según tu rol.
+        {t('dashboard.greeting').replace('{name}', userName)}
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard title="Total leads" value={totalLeads ?? 0} />
-        <KpiCard title="Nuevos esta semana" value={newThisWeek ?? 0} />
-        <KpiCard title="En pipeline" value={inPipeline} subtitle="No ganados/perdidos" />
+        <KpiCard title={t('dashboard.totalLeadsTitle')} value={totalLeads ?? 0} />
+        <KpiCard title={t('dashboard.newThisWeek')} value={newThisWeek ?? 0} />
+        <KpiCard title={t('dashboard.inPipeline')} value={inPipeline} subtitle={t('dashboard.notWonLost')} />
       </div>
 
       <LeadsChart data={chartData} />
@@ -68,19 +72,19 @@ export default async function DashboardHome() {
         {showQuickActions && (
           <div className="space-y-4">
             <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <h3 className="text-sm font-semibold text-zinc-900">Acciones rápidas</h3>
+              <h3 className="text-sm font-semibold text-zinc-900">{t('dashboard.quickActions')}</h3>
               <div className="mt-4 flex flex-col gap-2">
                 <Link
                   href="/dashboard/leads/nuevo"
                   className="flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white hover:bg-indigo-700"
                 >
-                  Nuevo lead
+                  {t('leads.newLead')}
                 </Link>
                 <Link
                   href="/dashboard/pipeline"
                   className="flex items-center justify-center rounded-lg border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
                 >
-                  Abrir pipeline
+                  {t('dashboard.openPipeline')}
                 </Link>
               </div>
             </div>

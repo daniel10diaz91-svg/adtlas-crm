@@ -2,19 +2,21 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/components/LanguageProvider';
 
 type User = { id: string; name: string | null; email: string; role: string };
 
-const ROLES = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'manager', label: 'Manager' },
-  { value: 'sales', label: 'Ventas' },
-  { value: 'support', label: 'Soporte' },
-  { value: 'readonly', label: 'Solo lectura' },
-];
+const ROLE_KEYS = {
+  admin: 'admin.roleAdmin',
+  manager: 'admin.roleManager',
+  sales: 'admin.roleSales',
+  support: 'admin.roleSupport',
+  readonly: 'admin.roleReadonly',
+} as const;
 
 export function UsersList({ users }: { users: User[] }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function UsersList({ users }: { users: User[] }) {
     const name = (form.elements.namedItem('name') as HTMLInputElement).value.trim();
     const role = (form.elements.namedItem('role') as HTMLSelectElement).value;
     if (!email || !password) {
-      setError('Email y contraseña son obligatorios');
+      setError(t('admin.emailPasswordRequired'));
       return;
     }
     setLoading(true);
@@ -43,7 +45,7 @@ export function UsersList({ users }: { users: User[] }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Error al crear usuario');
+        setError(data.error || t('admin.errorCreatingUser'));
         return;
       }
       setShowForm(false);
@@ -89,7 +91,7 @@ export function UsersList({ users }: { users: User[] }) {
           onClick={() => setShowForm(!showForm)}
           className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
         >
-          {showForm ? 'Cancelar' : 'Nuevo usuario'}
+          {showForm ? t('common.cancel') : t('admin.newUser')}
         </button>
       </div>
 
@@ -101,35 +103,35 @@ export function UsersList({ users }: { users: User[] }) {
 
       {showForm && (
         <form onSubmit={handleCreate} className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-          <h3 className="mb-3 text-sm font-medium text-zinc-900">Crear usuario</h3>
+          <h3 className="mb-3 text-sm font-medium text-zinc-900">{t('admin.createUserTitle')}</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-500">Email</label>
+              <label className="mb-1 block text-xs font-medium text-zinc-500">{t('auth.email')}</label>
               <input name="email" type="email" required className="input-field text-sm" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-500">Contraseña</label>
+              <label className="mb-1 block text-xs font-medium text-zinc-500">{t('admin.password')}</label>
               <input name="password" type="password" required className="input-field text-sm" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-500">Nombre</label>
+              <label className="mb-1 block text-xs font-medium text-zinc-500">{t('auth.name')}</label>
               <input name="name" type="text" className="input-field text-sm" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-500">Rol</label>
+              <label className="mb-1 block text-xs font-medium text-zinc-500">{t('admin.role')}</label>
               <select name="role" className="input-field text-sm" defaultValue="sales">
-                {ROLES.filter((r) => r.value !== 'admin').map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
+                {(['manager', 'sales', 'support', 'readonly'] as const).map((value) => (
+                  <option key={value} value={value}>{t(ROLE_KEYS[value])}</option>
                 ))}
               </select>
             </div>
           </div>
           <div className="mt-3 flex gap-2">
             <button type="submit" disabled={loading} className="rounded bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700 disabled:opacity-50">
-              Crear
+              {t('admin.create')}
             </button>
             <button type="button" onClick={() => setShowForm(false)} className="rounded border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50">
-              Cancelar
+              {t('common.cancel')}
             </button>
           </div>
         </form>
@@ -139,10 +141,10 @@ export function UsersList({ users }: { users: User[] }) {
         <table className="min-w-full divide-y divide-zinc-200">
           <thead className="bg-zinc-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">Nombre</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">Rol</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500">Acciones</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">{t('leads.name')}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">{t('auth.email')}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">{t('admin.role')}</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500">{t('admin.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200">
@@ -164,9 +166,9 @@ export function UsersList({ users }: { users: User[] }) {
                         onChange={(e) => setEditRole(e.target.value)}
                         className="input-field rounded py-1.5 text-sm"
                       >
-                        {ROLES.map((r) => (
-                          <option key={r.value} value={r.value}>{r.label}</option>
-                        ))}
+                      {(['admin', 'manager', 'sales', 'support', 'readonly'] as const).map((value) => (
+                        <option key={value} value={value}>{t(ROLE_KEYS[value])}</option>
+                      ))}
                       </select>
                     </td>
                     <td className="px-4 py-2 text-right">
@@ -176,10 +178,10 @@ export function UsersList({ users }: { users: User[] }) {
                         disabled={loading}
                         className="text-indigo-600 hover:underline disabled:opacity-50"
                       >
-                        Guardar
+                        {t('common.save')}
                       </button>
                       <button type="button" onClick={() => setEditingId(null)} className="ml-2 text-zinc-500 hover:underline">
-                        Cancelar
+                        {t('common.cancel')}
                       </button>
                     </td>
                   </>
@@ -188,11 +190,11 @@ export function UsersList({ users }: { users: User[] }) {
                     <td className="px-4 py-3 text-sm text-zinc-900">{u.name || '—'}</td>
                     <td className="px-4 py-3 text-sm text-zinc-600">{u.email}</td>
                     <td className="px-4 py-3 text-sm text-zinc-600">
-                      {ROLES.find((r) => r.value === u.role)?.label ?? u.role}
+                      {(u.role in ROLE_KEYS ? t(ROLE_KEYS[u.role as keyof typeof ROLE_KEYS]) : u.role)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button type="button" onClick={() => startEdit(u)} className="text-indigo-600 hover:underline text-sm">
-                        Editar
+                        {t('common.edit')}
                       </button>
                     </td>
                   </>

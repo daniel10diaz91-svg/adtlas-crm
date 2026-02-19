@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSlaStatus, slaColorsLight, slaShortLabels, slaTooltips } from '@/lib/sla';
+import { useLanguage } from '@/components/LanguageProvider';
 
 type Lead = {
   id: string;
@@ -40,6 +41,7 @@ export function LeadsList({
   role?: string;
 }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [originFilter, setOriginFilter] = useState<string>('');
   const showViewSelector = role === 'admin' || role === 'manager';
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -57,12 +59,12 @@ export function LeadsList({
   }
 
   async function handleDelete(leadId: string) {
-    if (!confirm('Delete this lead? This cannot be undone.')) return;
+    if (!confirm(t('leads.deleteConfirm'))) return;
     setDeletingId(leadId);
     const res = await fetch(`/api/leads/${leadId}`, { method: 'DELETE' });
     setDeletingId(null);
     if (res.ok) router.refresh();
-    else alert('Could not delete lead.');
+    else alert(t('leads.deleteError'));
   }
 
   const filtered = originFilter
@@ -93,7 +95,7 @@ export function LeadsList({
                 currentView === v ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'
               }`}
             >
-              {v === 'mine' ? 'Mis registros' : v === 'team' ? 'Mi equipo' : 'Todos'}
+              {v === 'mine' ? t('leads.viewMine') : v === 'team' ? t('leads.viewTeam') : t('leads.viewAll')}
             </button>
           ))}
         </div>
@@ -120,14 +122,14 @@ export function LeadsList({
           <table className="w-full text-left text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50/80">
               <tr>
-                <th className="w-20 px-3 py-3 font-medium text-zinc-600" title="Tiempo desde que entró el lead (respuesta rápida = más cierres)">Tiempo</th>
-                <th className="px-5 py-3 font-medium text-zinc-600">Name</th>
-                <th className="px-5 py-3 font-medium text-zinc-600">Email</th>
-                <th className="px-5 py-3 font-medium text-zinc-600">Phone</th>
-                <th className="px-5 py-3 font-medium text-zinc-600">Origin</th>
-                {canAssignAndDelete && <th className="px-5 py-3 font-medium text-zinc-600">Assigned to</th>}
-                <th className="px-5 py-3 font-medium text-zinc-600">Date</th>
-                <th className="w-10 px-5 py-3 font-medium text-zinc-600">Actions</th>
+                <th className="w-20 px-3 py-3 font-medium text-zinc-600" title={t('leads.tableTimeTitle')}>{t('leads.tableTime')}</th>
+                <th className="px-5 py-3 font-medium text-zinc-600">{t('leads.tableName')}</th>
+                <th className="px-5 py-3 font-medium text-zinc-600">{t('leads.tableEmail')}</th>
+                <th className="px-5 py-3 font-medium text-zinc-600">{t('leads.tablePhone')}</th>
+                <th className="px-5 py-3 font-medium text-zinc-600">{t('leads.origin')}</th>
+                {canAssignAndDelete && <th className="px-5 py-3 font-medium text-zinc-600">{t('leads.assignedTo')}</th>}
+                <th className="px-5 py-3 font-medium text-zinc-600">{t('leads.tableDate')}</th>
+                <th className="w-10 px-5 py-3 font-medium text-zinc-600">{t('leads.tableActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -150,22 +152,22 @@ export function LeadsList({
                           />
                         </svg>
                       </div>
-                      <p className="mt-4 font-medium text-zinc-900">No leads yet</p>
+                      <p className="mt-4 font-medium text-zinc-900">{t('leads.noLeadsYet')}</p>
                       <p className="mt-1 max-w-sm text-sm text-zinc-500">
-                        Add your first lead manually or connect Meta/Google in Integrations.
+                        {t('leads.noLeadsHint')}
                       </p>
                       <div className="mt-6 flex gap-3">
                         <Link
                           href="/dashboard/leads/nuevo"
                           className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
                         >
-                          Add your first lead
+                          {t('leads.addFirstLead')}
                         </Link>
                         <Link
                           href="/dashboard/integraciones"
                           className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
                         >
-                          Integrations
+                          {t('leads.integrationsLink')}
                         </Link>
                       </div>
                     </div>
@@ -208,7 +210,7 @@ export function LeadsList({
                           disabled={assigningId === lead.id}
                           className="rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-700 disabled:opacity-50"
                         >
-                          <option value="">Unassigned</option>
+                          <option value="">{t('common.unassigned')}</option>
                           {tenantUsers.map((u) => (
                             <option key={u.id} value={u.id}>
                               {u.name || u.email}
@@ -224,7 +226,7 @@ export function LeadsList({
                         onClick={() => handleDelete(lead.id)}
                         disabled={deletingId === lead.id}
                         className="rounded p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                        title="Delete lead"
+                        title={t('common.delete')}
                       >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

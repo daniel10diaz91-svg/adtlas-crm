@@ -77,7 +77,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         </Link>
         <button
           type="button"
-          aria-label="Cerrar menú"
+          aria-label={t('common.closeMenu')}
           className="rounded p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 lg:hidden"
           onClick={onClose}
         >

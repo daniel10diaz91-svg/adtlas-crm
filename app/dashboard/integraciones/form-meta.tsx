@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/components/LanguageProvider';
 
 export function FormMeta() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [pageId, setPageId] = useState('');
   const [formId, setFormId] = useState('');
   const [name, setName] = useState('');
@@ -15,7 +17,7 @@ export function FormMeta() {
     e.preventDefault();
     setError('');
     if (!pageId.trim() || !formId.trim()) {
-      setError('Page ID and Form ID are required');
+      setError(t('integrations.pageIdFormIdRequired'));
       return;
     }
     setLoading(true);
@@ -31,7 +33,7 @@ export function FormMeta() {
     setLoading(false);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(data.error || 'Error saving');
+      setError(data.error || t('integrations.errorSaving'));
       return;
     }
     setPageId('');
@@ -43,32 +45,32 @@ export function FormMeta() {
   return (
     <form onSubmit={handleSubmit} className="mt-4 flex flex-wrap items-end gap-4">
       <div>
-        <label className="mb-1 block text-sm text-zinc-600">Page ID (Meta)</label>
+        <label className="mb-1 block text-sm text-zinc-600">{t('integrations.metaPageId')} (Meta)</label>
         <input
           type="text"
           value={pageId}
           onChange={(e) => setPageId(e.target.value)}
-          placeholder="e.g. 123456789"
+          placeholder={t('integrations.placeholderPage')}
           className="input-field w-40 text-sm"
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm text-zinc-600">Form ID (Meta)</label>
+        <label className="mb-1 block text-sm text-zinc-600">{t('integrations.metaFormId')} (Meta)</label>
         <input
           type="text"
           value={formId}
           onChange={(e) => setFormId(e.target.value)}
-          placeholder="e.g. 987654321"
+          placeholder={t('integrations.placeholderForm')}
           className="input-field w-40 text-sm"
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm text-zinc-600">Name (optional)</label>
+        <label className="mb-1 block text-sm text-zinc-600">{t('integrations.metaSourceName')} (optional)</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Web form"
+          placeholder={t('integrations.placeholderName')}
           className="input-field w-40 text-sm"
         />
       </div>
@@ -77,7 +79,7 @@ export function FormMeta() {
         disabled={loading}
         className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
       >
-        {loading ? 'Saving...' : 'Add'}
+        {loading ? t('common.saving') : t('integrations.add')}
       </button>
       {error && <p className="w-full text-sm text-red-600">{error}</p>}
     </form>

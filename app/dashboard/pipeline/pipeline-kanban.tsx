@@ -14,6 +14,7 @@ import {
 } from '@dnd-kit/core';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { getSlaStatus, getSlaLabel, slaColors, slaTooltips } from '@/lib/sla';
+import { useLanguage } from '@/components/LanguageProvider';
 
 type Stage = { id: string; name: string; order: number };
 type Lead = { id: string; name: string | null; email: string | null; stage_id: string | null; created_at?: string };
@@ -24,12 +25,14 @@ function LeadCard({
   stages,
   firstStageId,
   onStageChange,
+  noNameLabel,
 }: {
   lead: Lead;
   isDragOverlay?: boolean;
   stages?: Stage[];
   firstStageId?: string;
   onStageChange?: (leadId: string, stageId: string) => void;
+  noNameLabel: string;
 }) {
   const sla = lead.created_at ? getSlaStatus(lead.created_at) : null;
 
@@ -42,7 +45,7 @@ function LeadCard({
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 flex-1 font-medium text-zinc-900">
           <Link href={`/dashboard/leads/${lead.id}`} className="text-indigo-600 hover:underline">
-            {lead.name || 'No name'}
+            {lead.name || noNameLabel}
           </Link>
         </p>
         {sla && (
@@ -77,12 +80,14 @@ function DraggableLeadCard({
   stages,
   firstStageId,
   onStageChange,
+  noNameLabel,
 }: {
   lead: Lead;
   stageId: string;
   stages: Stage[];
   firstStageId: string;
   onStageChange: (leadId: string, stageId: string) => void;
+  noNameLabel: string;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `lead-${lead.id}`,
@@ -101,6 +106,7 @@ function DraggableLeadCard({
         stages={stages}
         firstStageId={firstStageId}
         onStageChange={onStageChange}
+        noNameLabel={noNameLabel}
       />
     </div>
   );
@@ -112,6 +118,7 @@ function DroppableColumn({
   getLeadsForStage,
   stages,
   moveLead,
+  noNameLabel,
 }: {
   stage: Stage;
   leads: Lead[];
@@ -119,6 +126,7 @@ function DroppableColumn({
   getLeadsForStage: (stageId: string) => Lead[];
   moveLead: (leadId: string, stageId: string) => void;
   stages: Stage[];
+  noNameLabel: string;
 }) {
   const stageLeads = getLeadsForStage(stage.id);
   const { setNodeRef, isOver } = useDroppable({ id: `stage-${stage.id}` });
@@ -141,6 +149,7 @@ function DroppableColumn({
               stages={stages}
               firstStageId={firstStageId}
               onStageChange={moveLead}
+              noNameLabel={noNameLabel}
             />
           </li>
         ))}
@@ -156,6 +165,8 @@ function DroppableColumn({
 
 export function PipelineKanban({ stages, leads }: { stages: Stage[]; leads: Lead[] }) {
   const router = useRouter();
+  const { t } = useLanguage();
+  const noNameLabel = t('common.noName');
   const firstStageId = stages[0]?.id;
 
   const getLeadsForStage = (stageId: string) =>
@@ -221,12 +232,13 @@ export function PipelineKanban({ stages, leads }: { stages: Stage[]; leads: Lead
             getLeadsForStage={getLeadsForStage}
             moveLead={moveLead}
             stages={stages}
+            noNameLabel={noNameLabel}
           />
         ))}
       </div>
 
       <DragOverlay>
-        {activeLead ? <LeadCard lead={activeLead} isDragOverlay /> : null}
+        {activeLead ? <LeadCard lead={activeLead} isDragOverlay noNameLabel={noNameLabel} /> : null}
       </DragOverlay>
     </DndContext>
   );

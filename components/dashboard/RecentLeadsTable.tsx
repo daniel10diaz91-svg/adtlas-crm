@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useLanguage } from '@/components/LanguageProvider';
 
 type Lead = {
   id: string;
@@ -15,32 +18,34 @@ const originColors: Record<string, string> = {
 };
 
 export function RecentLeadsTable({ leads }: { leads: Lead[] }) {
+  const { t } = useLanguage();
+
   return (
     <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
-        <h3 className="text-sm font-semibold text-zinc-900">Recent leads</h3>
+        <h3 className="text-sm font-semibold text-zinc-900">{t('dashboard.recentLeads')}</h3>
         <Link
           href="/dashboard/leads"
           className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
         >
-          View all
+          {t('common.viewAll')}
         </Link>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-zinc-100 bg-zinc-50/50">
             <tr>
-              <th className="px-5 py-3 font-medium text-zinc-600">Name</th>
-              <th className="px-5 py-3 font-medium text-zinc-600">Email</th>
-              <th className="px-5 py-3 font-medium text-zinc-600">Source</th>
-              <th className="px-5 py-3 font-medium text-zinc-600">Date</th>
+              <th className="px-5 py-3 font-medium text-zinc-600">{t('leads.tableName')}</th>
+              <th className="px-5 py-3 font-medium text-zinc-600">{t('leads.tableEmail')}</th>
+              <th className="px-5 py-3 font-medium text-zinc-600">{t('leads.tableSource')}</th>
+              <th className="px-5 py-3 font-medium text-zinc-600">{t('leads.tableDate')}</th>
             </tr>
           </thead>
           <tbody>
             {leads.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-5 py-8 text-center text-zinc-500">
-                  No leads yet
+                  {t('leads.noLeadsYet')}
                 </td>
               </tr>
             ) : (

@@ -32,7 +32,7 @@ export function TopBar({ displayName, onMenuClick }: TopBarProps) {
         {onMenuClick && (
           <button
             type="button"
-            aria-label="Abrir menú"
+            aria-label={t('common.openMenu')}
             className="rounded p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 lg:hidden"
             onClick={onMenuClick}
           >

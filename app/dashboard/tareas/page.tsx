@@ -1,11 +1,13 @@
 import { getSession } from '@/lib/session';
 import { createServiceClient } from '@/lib/supabase/service';
+import { getServerT } from '@/lib/i18n-server';
 import Link from 'next/link';
 import { TasksList } from './TasksList';
 
 export default async function TareasPage() {
   const session = await getSession();
   if (!session) return null;
+  const t = await getServerT();
   const supabase = createServiceClient();
   const role = session.user.role;
   const userId = session.user.id;
@@ -38,13 +40,13 @@ export default async function TareasPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-zinc-600">Tareas pendientes y recordatorios.</p>
+        <p className="text-zinc-600">{t('tasks.tasksPending')}</p>
         {canCreateTask && (
           <Link
             href="/dashboard/tareas/nuevo"
             className="inline-flex shrink-0 items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
           >
-            Nueva tarea
+            {t('tasks.newTask')}
           </Link>
         )}
       </div>

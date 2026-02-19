@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/components/LanguageProvider';
 
 type Lead = {
   id: string;
@@ -30,24 +31,34 @@ type TimelineEvent = {
 
 const TABS = ['details', 'activities', 'related', 'timeline'] as const;
 
-function buildTimelineEvents(lead: Lead, stages: Stage[], tasks: Task[]): TimelineEvent[] {
+function buildTimelineEvents(
+  lead: Lead,
+  tasks: Task[],
+  t: (k: import('@/lib/i18n').TranslationKey) => string,
+  locale: string
+): TimelineEvent[] {
   const events: TimelineEvent[] = [
     {
       id: 'created',
       at: lead.created_at,
       type: 'created',
-      label: 'Lead creado',
-      detail: lead.origin ? `Origen: ${lead.origin}` : undefined,
+      label: t('timeline.leadCreated'),
+      detail: lead.origin ? `${t('timeline.origin')}: ${lead.origin}` : undefined,
     },
   ];
-  tasks.forEach((t) => {
-    if (t.created_at) {
+  const dateOpts: Intl.DateTimeFormatOptions = { dateStyle: 'short', timeStyle: 'short' };
+  tasks.forEach((task) => {
+    if (task.created_at) {
       events.push({
-        id: t.id,
-        at: t.created_at,
+        id: task.id,
+        at: task.created_at,
         type: 'task',
-        label: t.done ? `Tarea completada: ${t.title}` : `Tarea: ${t.title}`,
-        detail: t.due_at ? `Vencimiento: ${new Date(t.due_at).toLocaleDateString('es')}` : undefined,
+        label: task.done
+          ? `${t('timeline.taskCompleted')}: ${task.title}`
+          : `${t('timeline.task')}: ${task.title}`,
+        detail: task.due_at
+          ? `${t('timeline.dueDate')}: ${new Date(task.due_at).toLocaleDateString(locale === 'es' ? 'es' : 'en', dateOpts)}`
+          : undefined,
       });
     }
   });
@@ -59,12 +70,16 @@ function TimelineTab({
   lead,
   stages,
   tasks,
+  t,
+  locale,
 }: {
   lead: Lead;
   stages: Stage[];
   tasks: Task[];
+  t: (k: import('@/lib/i18n').TranslationKey) => string;
+  locale: string;
 }) {
-  const events = buildTimelineEvents(lead, stages, tasks);
+  const events = buildTimelineEvents(lead, tasks, t, locale);
   const currentStage = stages.find((s) => s.id === lead.stage_id);
 
   return (
@@ -72,12 +87,12 @@ function TimelineTab({
       <div className="flex flex-col gap-0">
         {currentStage && (
           <p className="mb-4 text-sm text-zinc-600">
-            Etapa actual: <span className="font-medium text-zinc-900">{currentStage.name}</span>
+            {t('timeline.currentStage')}: <span className="font-medium text-zinc-900">{currentStage.name}</span>
           </p>
         )}
         <ul className="relative space-y-0">
           {events.length === 0 ? (
-            <li className="py-4 text-sm text-zinc-500">Sin eventos aún.</li>
+            <li className="py-4 text-sm text-zinc-500">{t('timeline.noEvents')}</li>
           ) : (
             events.map((ev, i) => (
               <li key={ev.id} className="relative flex gap-4 pb-6 last:pb-0">
@@ -89,7 +104,7 @@ function TimelineTab({
                   <p className="text-sm font-medium text-zinc-900">{ev.label}</p>
                   {ev.detail && <p className="mt-0.5 text-xs text-zinc-500">{ev.detail}</p>}
                   <p className="mt-1 text-xs text-zinc-400">
-                    {new Date(ev.at).toLocaleString('es', {
+                    {new Date(ev.at).toLocaleString(locale === 'es' ? 'es' : 'en', {
                       dateStyle: 'short',
                       timeStyle: 'short',
                     })}
@@ -122,6 +137,7 @@ export function LeadDetail({
   canEdit: boolean;
 }) {
   const router = useRouter();
+  const { t, locale } = useLanguage();
   const [tab, setTab] = useState<(typeof TABS)[number]>('details');
   const [stageId, setStageId] = useState(lead.stage_id ?? '');
   const [assignId, setAssignId] = useState(lead.assigned_to_user_id ?? '');
@@ -164,9 +180,9 @@ export function LeadDetail({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link href="/dashboard/leads" className="text-sm text-indigo-600 hover:underline">
-            ← Volver a leads
+            ← {t('detail.backToLeads')}
           </Link>
-          <h1 className="mt-1 text-xl font-semibold text-zinc-900">{lead.name || 'Sin nombre'}</h1>
+          <h1 className="mt-1 text-xl font-semibold text-zinc-900">{lead.name || t('common.noName')}</h1>
           {lead.email && <p className="text-sm text-zinc-500">{lead.email}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -177,7 +193,7 @@ export function LeadDetail({
               disabled={updating}
               className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-900"
             >
-              <option value="">Sin etapa</option>
+              <option value="">{t('common.noStage')}</option>
               {stages.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -190,7 +206,7 @@ export function LeadDetail({
               disabled={updating}
               className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-900"
             >
-              <option value="">Sin asignar</option>
+              <option value="">{t('common.unassigned')}</option>
               {tenantUsers.map((u) => (
                 <option key={u.id} value={u.id}>{u.name || u.email}</option>
               ))}
@@ -201,7 +217,7 @@ export function LeadDetail({
               href={`/dashboard/tareas/nuevo?leadId=${lead.id}`}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
             >
-              Nueva tarea
+              {t('detail.newTask')}
             </Link>
           )}
         </div>
@@ -209,21 +225,21 @@ export function LeadDetail({
 
       <div className="border-b border-zinc-200">
         <nav className="flex gap-6">
-          {TABS.map((t) => (
+          {TABS.map((tabKey) => (
             <button
-              key={t}
+              key={tabKey}
               type="button"
-              onClick={() => setTab(t)}
+              onClick={() => setTab(tabKey)}
               className={`border-b-2 py-3 text-sm font-medium ${
-                tab === t
+                tab === tabKey
                   ? 'border-indigo-600 text-indigo-600'
                   : 'border-transparent text-zinc-500 hover:border-zinc-300 hover:text-zinc-700'
               }`}
             >
-              {t === 'details' && 'Detalles'}
-              {t === 'activities' && 'Actividades'}
-              {t === 'related' && 'Relacionados'}
-              {t === 'timeline' && 'Timeline'}
+              {tabKey === 'details' && t('detail.details')}
+              {tabKey === 'activities' && t('detail.activities')}
+              {tabKey === 'related' && t('detail.related')}
+              {tabKey === 'timeline' && t('detail.timeline')}
             </button>
           ))}
         </nav>
@@ -233,35 +249,35 @@ export function LeadDetail({
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <dl className="grid gap-4 sm:grid-cols-2">
             <div>
-              <dt className="text-xs font-medium text-zinc-500">Nombre</dt>
+              <dt className="text-xs font-medium text-zinc-500">{t('leads.name')}</dt>
               <dd className="mt-0.5 text-sm text-zinc-900">{lead.name || '—'}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-zinc-500">Email</dt>
+              <dt className="text-xs font-medium text-zinc-500">{t('leads.email')}</dt>
               <dd className="mt-0.5 text-sm text-zinc-900">{lead.email || '—'}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-zinc-500">Teléfono</dt>
+              <dt className="text-xs font-medium text-zinc-500">{t('detail.phone')}</dt>
               <dd className="mt-0.5 text-sm text-zinc-900">{lead.phone || '—'}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-zinc-500">Origen</dt>
+              <dt className="text-xs font-medium text-zinc-500">{t('leads.origin')}</dt>
               <dd className="mt-0.5 text-sm text-zinc-900">{lead.origin || '—'}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-zinc-500">Etapa</dt>
+              <dt className="text-xs font-medium text-zinc-500">{t('leads.stage')}</dt>
               <dd className="mt-0.5 text-sm text-zinc-900">
                 {stages.find((s) => s.id === lead.stage_id)?.name ?? '—'}
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-zinc-500">Asignado a</dt>
+              <dt className="text-xs font-medium text-zinc-500">{t('leads.assignedTo')}</dt>
               <dd className="mt-0.5 text-sm text-zinc-900">{assignedTo ? (assignedTo.name || assignedTo.email) : '—'}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-zinc-500">Creado</dt>
+              <dt className="text-xs font-medium text-zinc-500">{t('detail.created')}</dt>
               <dd className="mt-0.5 text-sm text-zinc-900">
-                {new Date(lead.created_at).toLocaleString('es')}
+                {new Date(lead.created_at).toLocaleString(locale === 'es' ? 'es' : 'en')}
               </dd>
             </div>
           </dl>
@@ -270,16 +286,16 @@ export function LeadDetail({
 
       {tab === 'activities' && (
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h3 className="text-sm font-semibold text-zinc-900">Tareas</h3>
+          <h3 className="text-sm font-semibold text-zinc-900">{t('detail.tasksTitle')}</h3>
           {tasks.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500">No hay tareas.</p>
+            <p className="mt-2 text-sm text-zinc-500">{t('detail.noTasks')}</p>
           ) : (
             <ul className="mt-3 space-y-2">
-              {tasks.map((t) => (
-                <li key={t.id} className="flex items-center justify-between rounded-lg border border-zinc-100 px-3 py-2">
-                  <span className={`text-sm ${t.done ? 'text-zinc-400 line-through' : 'text-zinc-900'}`}>{t.title}</span>
-                  {t.due_at && (
-                    <span className="text-xs text-zinc-500">{new Date(t.due_at).toLocaleDateString('es')}</span>
+              {tasks.map((task) => (
+                <li key={task.id} className="flex items-center justify-between rounded-lg border border-zinc-100 px-3 py-2">
+                  <span className={`text-sm ${task.done ? 'text-zinc-400 line-through' : 'text-zinc-900'}`}>{task.title}</span>
+                  {task.due_at && (
+                    <span className="text-xs text-zinc-500">{new Date(task.due_at).toLocaleDateString(locale === 'es' ? 'es' : 'en')}</span>
                   )}
                 </li>
               ))}
@@ -290,7 +306,7 @@ export function LeadDetail({
               href={`/dashboard/tareas/nuevo?leadId=${lead.id}`}
               className="mt-4 inline-block text-sm font-medium text-indigo-600 hover:underline"
             >
-              + Añadir tarea
+              + {t('detail.addTask')}
             </Link>
           )}
         </div>
@@ -298,12 +314,12 @@ export function LeadDetail({
 
       {tab === 'related' && (
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-zinc-500">Oportunidades y casos relacionados (próximamente).</p>
+          <p className="text-sm text-zinc-500">{t('detail.relatedComingSoon')}</p>
         </div>
       )}
 
       {tab === 'timeline' && (
-        <TimelineTab lead={lead} stages={stages} tasks={tasks} />
+        <TimelineTab lead={lead} stages={stages} tasks={tasks} t={t} locale={locale} />
       )}
     </div>
   );
