@@ -57,6 +57,10 @@ Abre [http://localhost:3000](http://localhost:3000). Puedes **Crear cuenta** (re
 - **Tareas**: listado (crear tareas desde la app en una siguiente iteración).
 - **Integraciones**: registro de orígenes Meta (page_id + form_id) para el webhook.
 
+## Desarrollo
+
+Para contribuir o hacer cambios con buenas prácticas (ramas, PRs, mensajes de commit): ver **[docs/git-workflow.md](docs/git-workflow.md)**.
+
 ## Despliegue (Vercel)
 
 1. Sube el repo a GitHub y conéctalo a Vercel.
