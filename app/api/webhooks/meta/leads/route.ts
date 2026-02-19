@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const formId = body?.entry?.[0]?.changes?.[0]?.value?.form_id ?? body?.form_id;
     const pageId = body?.entry?.[0]?.changes?.[0]?.value?.page_id ?? body?.page_id;
-    const leadgenId = body?.entry?.[0]?.changes?.[0]?.value?.leadgen_id ?? body?.leadgen_id;
+    const _leadgenId = body?.entry?.[0]?.changes?.[0]?.value?.leadgen_id ?? body?.leadgen_id;
 
     if (!formId || !pageId) {
       return NextResponse.json({ error: 'form_id or page_id missing' }, { status: 400 });
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     return NextResponse.json({ ok: true });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Error processing webhook' }, { status: 500 });
   }
 }

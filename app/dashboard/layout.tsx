@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
-import { Sidebar } from '@/components/dashboard/Sidebar';
-import { TopBar } from '@/components/dashboard/TopBar';
+import { DashboardShell } from '@/components/dashboard/DashboardShell';
 
 export default async function DashboardLayout({
   children,
@@ -13,12 +12,8 @@ export default async function DashboardLayout({
   const displayName = session.user.tenantName ?? session.user.email ?? 'Account';
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <Sidebar />
-      <div className="pl-[240px]">
-        <TopBar displayName={displayName} />
-        <main className="p-6">{children}</main>
-      </div>
-    </div>
+    <DashboardShell displayName={displayName}>
+      {children}
+    </DashboardShell>
   );
 }

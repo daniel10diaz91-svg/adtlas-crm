@@ -51,7 +51,7 @@ export default function NewTaskPage() {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900"
+            className="input-field"
             placeholder="e.g. Call lead back"
           />
         </div>
@@ -61,7 +61,7 @@ export default function NewTaskPage() {
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900"
+            className="input-field"
           />
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}

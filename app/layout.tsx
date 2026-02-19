@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { getEnvCheck } from "@/lib/env";
+import { getLocale } from "@/lib/i18n-server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,10 +53,11 @@ export default async function RootLayout({
       </html>
     );
   }
+  const locale = await getLocale();
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers initialLocale={locale}>{children}</Providers>
       </body>
     </html>
   );

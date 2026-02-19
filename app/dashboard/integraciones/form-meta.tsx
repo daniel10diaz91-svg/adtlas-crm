@@ -49,7 +49,7 @@ export function FormMeta() {
           value={pageId}
           onChange={(e) => setPageId(e.target.value)}
           placeholder="e.g. 123456789"
-          className="w-40 rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+          className="input-field w-40 text-sm"
         />
       </div>
       <div>
@@ -59,7 +59,7 @@ export function FormMeta() {
           value={formId}
           onChange={(e) => setFormId(e.target.value)}
           placeholder="e.g. 987654321"
-          className="w-40 rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+          className="input-field w-40 text-sm"
         />
       </div>
       <div>
@@ -69,7 +69,7 @@ export function FormMeta() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Web form"
-          className="w-40 rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+          className="input-field w-40 text-sm"
         />
       </div>
       <button

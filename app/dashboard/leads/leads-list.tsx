@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getSlaStatus, slaColorsLight, slaShortLabels, slaTooltips } from '@/lib/sla';
 
 type Lead = {
   id: string;
@@ -119,6 +120,7 @@ export function LeadsList({
           <table className="w-full text-left text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50/80">
               <tr>
+                <th className="w-20 px-3 py-3 font-medium text-zinc-600" title="Tiempo desde que entró el lead (respuesta rápida = más cierres)">Tiempo</th>
                 <th className="px-5 py-3 font-medium text-zinc-600">Name</th>
                 <th className="px-5 py-3 font-medium text-zinc-600">Email</th>
                 <th className="px-5 py-3 font-medium text-zinc-600">Phone</th>
@@ -131,7 +133,7 @@ export function LeadsList({
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={canAssignAndDelete ? 7 : 6}>
+                  <td colSpan={canAssignAndDelete ? 8 : 7}>
                     <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
                       <div className="rounded-full bg-zinc-100 p-4">
                         <svg
@@ -170,11 +172,18 @@ export function LeadsList({
                   </td>
                 </tr>
               ) : (
-                filtered.map((lead) => (
+                filtered.map((lead) => {
+                  const sla = getSlaStatus(lead.created_at);
+                  return (
                   <tr
                     key={lead.id}
                     className="border-b border-zinc-100 transition-colors hover:bg-zinc-50/50"
                   >
+                    <td className="px-3 py-3" title={slaTooltips[sla]}>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${slaColorsLight[sla]}`}>
+                        {slaShortLabels[sla]}
+                      </span>
+                    </td>
                     <td className="px-5 py-3 font-medium text-zinc-900">
                       <Link href={`/dashboard/leads/${lead.id}`} className="text-indigo-600 hover:underline">
                         {lead.name || '—'}
@@ -223,7 +232,8 @@ export function LeadsList({
                       </button>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

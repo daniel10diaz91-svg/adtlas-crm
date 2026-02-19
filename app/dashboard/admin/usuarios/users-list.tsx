@@ -105,19 +105,19 @@ export function UsersList({ users }: { users: User[] }) {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-zinc-500">Email</label>
-              <input name="email" type="email" required className="w-full rounded border border-zinc-300 px-3 py-2 text-sm" />
+              <input name="email" type="email" required className="input-field text-sm" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-zinc-500">Contraseña</label>
-              <input name="password" type="password" required className="w-full rounded border border-zinc-300 px-3 py-2 text-sm" />
+              <input name="password" type="password" required className="input-field text-sm" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-zinc-500">Nombre</label>
-              <input name="name" type="text" className="w-full rounded border border-zinc-300 px-3 py-2 text-sm" />
+              <input name="name" type="text" className="input-field text-sm" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-zinc-500">Rol</label>
-              <select name="role" className="w-full rounded border border-zinc-300 px-3 py-2 text-sm" defaultValue="sales">
+              <select name="role" className="input-field text-sm" defaultValue="sales">
                 {ROLES.filter((r) => r.value !== 'admin').map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
@@ -154,7 +154,7 @@ export function UsersList({ users }: { users: User[] }) {
                       <input
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="w-full rounded border border-zinc-300 px-2 py-1.5 text-sm"
+                        className="input-field w-full py-1.5 text-sm"
                       />
                     </td>
                     <td className="px-4 py-2 text-sm text-zinc-500">{u.email}</td>
@@ -162,7 +162,7 @@ export function UsersList({ users }: { users: User[] }) {
                       <select
                         value={editRole}
                         onChange={(e) => setEditRole(e.target.value)}
-                        className="rounded border border-zinc-300 px-2 py-1.5 text-sm"
+                        className="input-field rounded py-1.5 text-sm"
                       >
                         {ROLES.map((r) => (
                           <option key={r.value} value={r.value}>{r.label}</option>

@@ -9,7 +9,7 @@ export default async function TareasPage() {
   const supabase = createServiceClient();
   const role = session.user.role;
   const userId = session.user.id;
-  let tasksQuery = supabase
+  const tasksQuery = supabase
     .from('tasks')
     .select('id, title, due_at, done, lead_id')
     .eq('tenant_id', session.user.tenantId)

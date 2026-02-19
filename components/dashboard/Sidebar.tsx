@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useLanguage } from '@/components/LanguageProvider';
+import type { TranslationKey } from '@/lib/i18n';
 
-const nav = [
-  { href: '/dashboard', label: 'Home', icon: HomeIcon },
-  { href: '/dashboard/leads', label: 'Leads', icon: LeadsIcon },
-  { href: '/dashboard/pipeline', label: 'Pipeline', icon: PipelineIcon },
-  { href: '/dashboard/tareas', label: 'Tasks', icon: TasksIcon },
-  { href: '/dashboard/integraciones', label: 'Integrations', icon: IntegrationsIcon },
-  { href: '/dashboard/admin/usuarios', label: 'Admin', icon: AdminIcon },
+const nav: { href: string; labelKey: TranslationKey; icon: React.ComponentType<{ className?: string }> }[] = [
+  { href: '/dashboard', labelKey: 'nav.home', icon: HomeIcon },
+  { href: '/dashboard/leads', labelKey: 'nav.leads', icon: LeadsIcon },
+  { href: '/dashboard/pipeline', labelKey: 'nav.pipeline', icon: PipelineIcon },
+  { href: '/dashboard/tareas', labelKey: 'nav.tasks', icon: TasksIcon },
+  { href: '/dashboard/integraciones', labelKey: 'nav.integrations', icon: IntegrationsIcon },
+  { href: '/dashboard/admin/usuarios', labelKey: 'nav.admin', icon: AdminIcon },
 ];
 
 function AdminIcon({ className }: { className?: string }) {
@@ -57,18 +59,35 @@ function IntegrationsIcon({ className }: { className?: string }) {
   );
 }
 
-export function Sidebar() {
+type SidebarProps = { open?: boolean; onClose?: () => void };
+
+export function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   return (
-    <aside className="fixed left-0 top-0 z-30 flex h-full w-[240px] flex-col border-r border-zinc-200 bg-white">
-      <div className="flex h-14 items-center border-b border-zinc-200 px-4">
-        <Link href="/dashboard" className="font-semibold text-zinc-900">
+    <aside
+      className={`fixed left-0 top-0 z-30 flex h-full w-[240px] flex-col border-r border-zinc-200 bg-white transition-transform duration-200 ease-out lg:translate-x-0 ${
+        open ? 'translate-x-0' : '-translate-x-full'
+      }`}
+    >
+      <div className="flex h-14 items-center justify-between border-b border-zinc-200 px-4">
+        <Link href="/dashboard" className="font-semibold text-zinc-900" onClick={onClose}>
           Adtlas CRM
         </Link>
+        <button
+          type="button"
+          aria-label="Cerrar menú"
+          className="rounded p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 lg:hidden"
+          onClick={onClose}
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
-      <nav className="flex-1 space-y-0.5 p-3">
-        {nav.map(({ href, label, icon: Icon }) => {
+      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
+        {nav.map(({ href, labelKey, icon: Icon }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
           return (
             <Link
@@ -77,9 +96,10 @@ export function Sidebar() {
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                 active ? 'bg-indigo-50 text-indigo-700' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
               }`}
+              onClick={onClose}
             >
               <Icon className="h-5 w-5 shrink-0" />
-              {label}
+              {t(labelKey)}
             </Link>
           );
         })}

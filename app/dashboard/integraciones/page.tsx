@@ -1,6 +1,5 @@
 import { getSession } from '@/lib/session';
 import { createServiceClient } from '@/lib/supabase/service';
-import Link from 'next/link';
 import { FormMeta } from './form-meta';
 
 export default async function IntegracionesPage() {

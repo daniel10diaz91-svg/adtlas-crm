@@ -13,9 +13,10 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
+import { getSlaStatus, getSlaLabel, slaColors, slaTooltips } from '@/lib/sla';
 
 type Stage = { id: string; name: string; order: number };
-type Lead = { id: string; name: string | null; email: string | null; stage_id: string | null };
+type Lead = { id: string; name: string | null; email: string | null; stage_id: string | null; created_at?: string };
 
 function LeadCard({
   lead,
@@ -30,18 +31,28 @@ function LeadCard({
   firstStageId?: string;
   onStageChange?: (leadId: string, stageId: string) => void;
 }) {
+  const sla = lead.created_at ? getSlaStatus(lead.created_at) : null;
+
   return (
     <div
       className={`rounded-lg border bg-white p-3 text-sm shadow-sm ${
         isDragOverlay ? 'border-indigo-300 shadow-md' : 'border-zinc-200'
       }`}
     >
-      <p className="font-medium text-zinc-900">
-      <Link href={`/dashboard/leads/${lead.id}`} className="text-indigo-600 hover:underline">
-        {lead.name || 'No name'}
-      </Link>
-    </p>
-      {lead.email && <p className="mt-0.5 text-zinc-500">{lead.email}</p>}
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 flex-1 font-medium text-zinc-900">
+          <Link href={`/dashboard/leads/${lead.id}`} className="text-indigo-600 hover:underline">
+            {lead.name || 'No name'}
+          </Link>
+        </p>
+        {sla && (
+          <span
+            className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${slaColors[sla]}`}
+            title={`${getSlaLabel(lead.created_at!)} — ${slaTooltips[sla]}`}
+          />
+        )}
+      </div>
+      {lead.email && <p className="mt-0.5 truncate text-zinc-500">{lead.email}</p>}
       {!isDragOverlay && stages && firstStageId && onStageChange && (
         <select
           className="mt-2 w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-900"
