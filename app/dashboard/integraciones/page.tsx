@@ -1,12 +1,11 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSession } from '@/lib/session';
 import { createServiceClient } from '@/lib/supabase/service';
 import Link from 'next/link';
 import { FormMeta } from './form-meta';
 
 export default async function IntegracionesPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.tenantId) return null;
+  const session = await getSession();
+  if (!session) return null;
   const supabase = createServiceClient();
   const { data: sources } = await supabase
     .from('lead_sources')

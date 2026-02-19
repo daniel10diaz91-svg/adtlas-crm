@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSession } from '@/lib/session';
 import { createServiceClient } from '@/lib/supabase/service';
 import Link from 'next/link';
 import { KpiCard } from '@/components/dashboard/KpiCard';
@@ -7,23 +6,26 @@ import { LeadsChart } from '@/components/dashboard/LeadsChart';
 import { RecentLeadsTable } from '@/components/dashboard/RecentLeadsTable';
 
 export default async function DashboardHome() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.tenantId) return null;
+  const session = await getSession();
+  if (!session) return null;
 
   const supabase = createServiceClient();
   const tenantId = session.user.tenantId;
+  const role = session.user.role;
+  const userId = session.user.id;
+  const leadFilter = role === 'ventas' ? { tenant_id: tenantId, assigned_to_user_id: userId } : { tenant_id: tenantId };
 
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
   const [{ count: totalLeads }, { count: newThisWeek }, { data: stages }, { data: allLeadsForPipeline }, { data: recentLeads }, { data: leadsForChart }] = await Promise.all([
-    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).gte('created_at', weekAgo.toISOString()),
+    supabase.from('leads').select('*', { count: 'exact', head: true }).match(leadFilter),
+    supabase.from('leads').select('*', { count: 'exact', head: true }).match(leadFilter).gte('created_at', weekAgo.toISOString()),
     supabase.from('pipeline_stages').select('id, name').eq('tenant_id', tenantId).order('order', { ascending: true }),
-    supabase.from('leads').select('id, stage_id').eq('tenant_id', tenantId),
-    supabase.from('leads').select('id, name, email, origin, created_at').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(10),
-    supabase.from('leads').select('created_at').eq('tenant_id', tenantId).gte('created_at', twoWeeksAgo.toISOString()),
+    supabase.from('leads').select('id, stage_id').match(leadFilter),
+    supabase.from('leads').select('id, name, email, origin, created_at').match(leadFilter).order('created_at', { ascending: false }).limit(10),
+    supabase.from('leads').select('created_at').match(leadFilter).gte('created_at', twoWeeksAgo.toISOString()),
   ]);
 
   const closedStageIds = (stages ?? []).slice(-2).map((s) => s.id);

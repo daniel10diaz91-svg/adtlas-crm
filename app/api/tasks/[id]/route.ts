@@ -1,24 +1,43 @@
-import { getServerSession } from 'next-auth';
-import { NextResponse } from 'next/server';
-import { authOptions } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/service';
+import { getSessionOr401 } from '@/lib/session';
+import { canUpdateTask } from '@/lib/permissions';
+import { ok, serverError, notFound, forbidden, badRequest, validateUuidParam } from '@/lib/api-response';
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.tenantId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const [session, authErr] = await getSessionOr401();
+  if (authErr) return authErr;
+
   const { id } = await params;
-  const body = await req.json();
-  const { done, title, due_at } = body;
-  const supabase = createServiceClient();
+  const invalidId = validateUuidParam(id);
+  if (invalidId) return invalidId;
+
+  const updateCheck = await canUpdateTask(
+    session.user.id,
+    session.user.role,
+    id,
+    session.user.tenantId
+  );
+  if (!updateCheck.allowed) {
+    if (updateCheck.notFound) return notFound();
+    return forbidden();
+  }
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return badRequest('Invalid JSON');
+  }
+  const { done, title, due_at } = body as Record<string, unknown>;
   const updates: { done?: boolean; title?: string; due_at?: string | null } = {};
   if (typeof done === 'boolean') updates.done = done;
-  if (title !== undefined) updates.title = title;
-  if (due_at !== undefined) updates.due_at = due_at || null;
+  if (title !== undefined) updates.title = typeof title === 'string' ? title : undefined;
+  if (due_at !== undefined) updates.due_at = due_at && typeof due_at === 'string' ? due_at : null;
+
+  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('tasks')
     .update(updates)
@@ -26,6 +45,6 @@ export async function PATCH(
     .eq('tenant_id', session.user.tenantId)
     .select()
     .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  if (error) return serverError(error.message);
+  return ok(data);
 }

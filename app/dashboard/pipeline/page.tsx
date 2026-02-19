@@ -1,12 +1,16 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSession } from '@/lib/session';
 import { createServiceClient } from '@/lib/supabase/service';
 import { PipelineKanban } from './pipeline-kanban';
 
 export default async function PipelinePage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.tenantId) return null;
+  const session = await getSession();
+  if (!session) return null;
   const supabase = createServiceClient();
+  const role = session.user.role;
+  const userId = session.user.id;
+  const leadFilter = role === 'ventas'
+    ? { tenant_id: session.user.tenantId, assigned_to_user_id: userId }
+    : { tenant_id: session.user.tenantId };
   const { data: stages } = await supabase
     .from('pipeline_stages')
     .select('*')
@@ -15,7 +19,7 @@ export default async function PipelinePage() {
   const { data: leads } = await supabase
     .from('leads')
     .select('*')
-    .eq('tenant_id', session.user.tenantId)
+    .match(leadFilter)
     .order('created_at', { ascending: false });
 
   return (

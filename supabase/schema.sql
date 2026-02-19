@@ -39,12 +39,13 @@ CREATE TABLE IF NOT EXISTS lead_sources (
   UNIQUE(origin, external_id)
 );
 
--- Leads
+-- Leads (assigned_to_user_id: vendedor asignado; solo admin puede cambiar)
 CREATE TABLE IF NOT EXISTS leads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   lead_source_id UUID REFERENCES lead_sources(id),
   stage_id UUID REFERENCES pipeline_stages(id),
+  assigned_to_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   origin TEXT NOT NULL CHECK (origin IN ('meta', 'google', 'manual')),
   name TEXT,
   email TEXT,
@@ -79,6 +80,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 -- Índices para filtrar por tenant
 CREATE INDEX IF NOT EXISTS idx_leads_tenant ON leads(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_leads_assigned_to ON leads(assigned_to_user_id);
 CREATE INDEX IF NOT EXISTS idx_lead_sources_tenant_origin ON lead_sources(tenant_id, origin);
 CREATE INDEX IF NOT EXISTS idx_pipeline_stages_tenant ON pipeline_stages(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_tenant ON tasks(tenant_id);

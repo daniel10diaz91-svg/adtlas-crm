@@ -12,7 +12,10 @@ type Lead = {
   phone: string | null;
   status: string;
   created_at: string;
+  assigned_to_user_id: string | null;
 };
+
+type TenantUser = { id: string; name: string | null; email: string };
 
 const originColors: Record<string, string> = {
   meta: 'bg-blue-100 text-blue-800',
@@ -20,10 +23,30 @@ const originColors: Record<string, string> = {
   manual: 'bg-zinc-100 text-zinc-600',
 };
 
-export function LeadsList({ leads }: { leads: Lead[] }) {
+export function LeadsList({
+  leads,
+  isAdmin,
+  tenantUsers,
+}: {
+  leads: Lead[];
+  isAdmin: boolean;
+  tenantUsers: TenantUser[];
+}) {
   const router = useRouter();
   const [originFilter, setOriginFilter] = useState<string>('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
+
+  async function handleAssign(leadId: string, userId: string | null) {
+    setAssigningId(leadId);
+    const res = await fetch(`/api/leads/${leadId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assigned_to_user_id: userId || null }),
+    });
+    setAssigningId(null);
+    if (res.ok) router.refresh();
+  }
 
   async function handleDelete(leadId: string) {
     if (!confirm('Delete this lead? This cannot be undone.')) return;
@@ -73,6 +96,7 @@ export function LeadsList({ leads }: { leads: Lead[] }) {
                 <th className="px-5 py-3 font-medium text-zinc-600">Email</th>
                 <th className="px-5 py-3 font-medium text-zinc-600">Phone</th>
                 <th className="px-5 py-3 font-medium text-zinc-600">Origin</th>
+                {isAdmin && <th className="px-5 py-3 font-medium text-zinc-600">Assigned to</th>}
                 <th className="px-5 py-3 font-medium text-zinc-600">Date</th>
                 <th className="w-10 px-5 py-3 font-medium text-zinc-600">Actions</th>
               </tr>
@@ -80,7 +104,7 @@ export function LeadsList({ leads }: { leads: Lead[] }) {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={isAdmin ? 7 : 6}>
                     <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
                       <div className="rounded-full bg-zinc-100 p-4">
                         <svg
@@ -136,6 +160,23 @@ export function LeadsList({ leads }: { leads: Lead[] }) {
                         {lead.origin}
                       </span>
                     </td>
+                    {isAdmin && (
+                      <td className="px-5 py-3">
+                        <select
+                          value={lead.assigned_to_user_id ?? ''}
+                          onChange={(e) => handleAssign(lead.id, e.target.value || null)}
+                          disabled={assigningId === lead.id}
+                          className="rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-700 disabled:opacity-50"
+                        >
+                          <option value="">Unassigned</option>
+                          {tenantUsers.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name || u.email}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    )}
                     <td className="px-5 py-3 text-zinc-500">{formatDate(lead.created_at)}</td>
                     <td className="px-5 py-3">
                       <button

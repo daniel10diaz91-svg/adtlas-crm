@@ -1,18 +1,37 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSession } from '@/lib/session';
 import { createServiceClient } from '@/lib/supabase/service';
 import Link from 'next/link';
 import { TasksList } from './TasksList';
 
 export default async function TareasPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.tenantId) return null;
+  const session = await getSession();
+  if (!session) return null;
   const supabase = createServiceClient();
-  const { data: tasks } = await supabase
+  const role = session.user.role;
+  const userId = session.user.id;
+  let tasksQuery = supabase
     .from('tasks')
     .select('id, title, due_at, done, lead_id')
     .eq('tenant_id', session.user.tenantId)
     .order('due_at', { ascending: true, nullsFirst: false });
+  let tasks: Awaited<ReturnType<typeof supabase.from<'tasks'>>>['data'] = null;
+  if (role === 'ventas') {
+    const { data: myLeadIds } = await supabase
+      .from('leads')
+      .select('id')
+      .eq('tenant_id', session.user.tenantId)
+      .eq('assigned_to_user_id', userId);
+    const ids = (myLeadIds ?? []).map((l) => l.id);
+    if (ids.length === 0) {
+      tasks = [];
+    } else {
+      const { data: tasksData } = await tasksQuery.in('lead_id', ids);
+      tasks = tasksData;
+    }
+  } else {
+    const { data: tasksData } = await tasksQuery;
+    tasks = tasksData;
+  }
 
   return (
     <div className="space-y-6">

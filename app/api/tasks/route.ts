@@ -1,44 +1,59 @@
-import { getServerSession } from 'next-auth';
-import { NextResponse } from 'next/server';
-import { authOptions } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/service';
+import { getSessionOr401 } from '@/lib/session';
+import { ok, serverError, badRequest } from '@/lib/api-response';
 
-export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.tenantId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+export async function GET() {
+  const [session, authErr] = await getSessionOr401();
+  if (authErr) return authErr;
+
   const supabase = createServiceClient();
-  const { data, error } = await supabase
+  let q = supabase
     .from('tasks')
     .select('*')
     .eq('tenant_id', session.user.tenantId)
     .order('due_at', { ascending: true, nullsFirst: false });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+
+  if (session.user.role === 'ventas') {
+    const { data: myLeadIds } = await supabase
+      .from('leads')
+      .select('id')
+      .eq('tenant_id', session.user.tenantId)
+      .eq('assigned_to_user_id', session.user.id);
+    const ids = (myLeadIds ?? []).map((l) => l.id);
+    if (ids.length === 0) return ok([]);
+    q = q.in('lead_id', ids);
+  }
+
+  const { data, error } = await q;
+  if (error) return serverError(error.message);
+  return ok(data ?? []);
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.tenantId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const [session, authErr] = await getSessionOr401();
+  if (authErr) return authErr;
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return badRequest('Invalid JSON');
   }
-  const body = await req.json();
-  const { title, due_at, lead_id } = body;
-  if (!title?.trim()) {
-    return NextResponse.json({ error: 'title is required' }, { status: 400 });
-  }
+  const { title, due_at, lead_id } = body as Record<string, unknown>;
+  const titleStr = title && typeof title === 'string' ? title.trim() : '';
+  if (!titleStr) return badRequest('title is required');
+
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('tasks')
     .insert({
       tenant_id: session.user.tenantId,
-      title: title.trim(),
-      due_at: due_at || null,
-      lead_id: lead_id || null,
+      title: titleStr,
+      due_at: due_at && typeof due_at === 'string' ? due_at || null : null,
+      lead_id: lead_id && typeof lead_id === 'string' ? lead_id : null,
     })
     .select()
     .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  if (error) return serverError(error.message);
+  return ok(data);
 }
