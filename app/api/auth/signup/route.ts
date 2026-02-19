@@ -68,13 +68,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: errUser.message }, { status: 500 });
     }
 
-    // 4) Default pipeline stages
+    // 4) Default pipeline stages (Kommo/GoHighLevel style)
     await supabase.from('pipeline_stages').insert([
-      { tenant_id: tenant.id, name: 'Lead', order: 0 },
-      { tenant_id: tenant.id, name: 'Contacted', order: 1 },
-      { tenant_id: tenant.id, name: 'Offer', order: 2 },
-      { tenant_id: tenant.id, name: 'Won', order: 3 },
-      { tenant_id: tenant.id, name: 'Lost', order: 4 },
+      { tenant_id: tenant.id, name: 'Prospecting', order: 0 },
+      { tenant_id: tenant.id, name: 'Qualification', order: 1 },
+      { tenant_id: tenant.id, name: 'Proposal', order: 2 },
+      { tenant_id: tenant.id, name: 'Negotiation', order: 3 },
+      { tenant_id: tenant.id, name: 'Won', order: 4 },
+      { tenant_id: tenant.id, name: 'Lost', order: 5 },
     ]);
 
     return NextResponse.json({ ok: true });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   DndContext,
@@ -35,7 +36,11 @@ function LeadCard({
         isDragOverlay ? 'border-indigo-300 shadow-md' : 'border-zinc-200'
       }`}
     >
-      <p className="font-medium text-zinc-900">{lead.name || 'No name'}</p>
+      <p className="font-medium text-zinc-900">
+      <Link href={`/dashboard/leads/${lead.id}`} className="text-indigo-600 hover:underline">
+        {lead.name || 'No name'}
+      </Link>
+    </p>
       {lead.email && <p className="mt-0.5 text-zinc-500">{lead.email}</p>}
       {!isDragOverlay && stages && firstStageId && onStageChange && (
         <select

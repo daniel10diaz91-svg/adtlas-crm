@@ -1,11 +1,13 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
 
 export default function NewTaskPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const leadId = searchParams.get('leadId') ?? '';
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,7 +17,7 @@ export default function NewTaskPage() {
     e.preventDefault();
     setError('');
     if (!title.trim()) {
-      setError('Title is required');
+      setError('El título es obligatorio');
       return;
     }
     setLoading(true);
@@ -25,21 +27,23 @@ export default function NewTaskPage() {
       body: JSON.stringify({
         title: title.trim(),
         due_at: dueDate || null,
+        lead_id: leadId || null,
       }),
     });
     setLoading(false);
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
-      setError(d.error || 'Error creating task');
+      setError(d.error || 'Error al crear tarea');
       return;
     }
-    router.push('/dashboard/tareas');
+    if (leadId) router.push(`/dashboard/leads/${leadId}`);
+    else router.push('/dashboard/tareas');
     router.refresh();
   }
 
   return (
     <div className="max-w-md space-y-6">
-      <p className="text-zinc-600">Add a task or reminder.</p>
+      <p className="text-zinc-600">{leadId ? 'Añadir tarea a este lead.' : 'Añadir tarea o recordatorio.'}</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="mb-1 block text-sm font-medium text-zinc-700">Title</label>
@@ -67,13 +71,13 @@ export default function NewTaskPage() {
             disabled={loading}
             className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {loading ? 'Saving...' : 'Save'}
+            {loading ? 'Guardando...' : 'Guardar'}
           </button>
           <Link
             href="/dashboard/tareas"
             className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
           >
-            Cancel
+            Cancelar
           </Link>
         </div>
       </form>

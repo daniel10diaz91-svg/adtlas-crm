@@ -1,7 +1,33 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { getSessionOr401 } from '@/lib/session';
 import { canUpdateLead, canDeleteLead, canSetLeadAssignment } from '@/lib/permissions';
-import { ok, serverError, unauthorized, forbidden, notFound, badRequest, validateUuidParam } from '@/lib/api-response';
+import { ok, serverError, forbidden, notFound, badRequest, validateUuidParam } from '@/lib/api-response';
+
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const [session, authErr] = await getSessionOr401();
+  if (authErr) return authErr;
+
+  const { id } = await params;
+  const invalidId = validateUuidParam(id);
+  if (invalidId) return invalidId;
+
+  if (session.user.role === 'support') return forbidden();
+
+  const supabase = createServiceClient();
+  const { data: lead, error } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('id', id)
+    .eq('tenant_id', session.user.tenantId)
+    .single();
+  if (error || !lead) return notFound();
+  if (session.user.role === 'sales' && lead.assigned_to_user_id !== session.user.id) return forbidden();
+
+  return ok(lead);
+}
 
 export async function PATCH(
   req: Request,

@@ -1,7 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { getSessionOr401 } from '@/lib/session';
-import { isUserInTenant } from '@/lib/permissions';
-import { ok, serverError, badRequest } from '@/lib/api-response';
+import { isUserInTenant, canSetLeadAssignment, canWriteLeads } from '@/lib/permissions';
+import { ok, serverError, badRequest, forbidden } from '@/lib/api-response';
 
 export async function GET(req: Request) {
   const [session, authErr] = await getSessionOr401();
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     .select('*')
     .eq('tenant_id', session.user.tenantId)
     .order('created_at', { ascending: false });
-  if (session.user.role === 'ventas') {
+  if (session.user.role === 'sales') {
     q = q.eq('assigned_to_user_id', session.user.id);
   }
   if (origin) q = q.eq('origin', origin);
@@ -27,6 +27,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const [session, authErr] = await getSessionOr401();
   if (authErr) return authErr;
+  if (!canWriteLeads(session.user)) return forbidden();
 
   let body: unknown;
   try {
@@ -36,13 +37,13 @@ export async function POST(req: Request) {
   }
   const { name, email, phone, assigned_to_user_id: bodyAssigned } = body as Record<string, unknown>;
   let assignedToUserId: string | null = null;
-  if (session.user.role === 'admin' && bodyAssigned !== undefined) {
+  if (canSetLeadAssignment(session.user) && bodyAssigned !== undefined) {
     const id = bodyAssigned && typeof bodyAssigned === 'string' ? bodyAssigned : null;
     if (id && !(await isUserInTenant(id, session.user.tenantId))) {
       return badRequest('Invalid assignee');
     }
     assignedToUserId = id;
-  } else if (session.user.role === 'ventas') {
+  } else if (session.user.role === 'sales') {
     assignedToUserId = session.user.id;
   }
 

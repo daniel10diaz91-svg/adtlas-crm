@@ -8,7 +8,7 @@ export default async function PipelinePage() {
   const supabase = createServiceClient();
   const role = session.user.role;
   const userId = session.user.id;
-  const leadFilter = role === 'ventas'
+  const leadFilter = role === 'sales'
     ? { tenant_id: session.user.tenantId, assigned_to_user_id: userId }
     : { tenant_id: session.user.tenantId };
   const { data: stages } = await supabase

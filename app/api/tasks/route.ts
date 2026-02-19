@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { getSessionOr401 } from '@/lib/session';
-import { ok, serverError, badRequest } from '@/lib/api-response';
+import { isReadOnly } from '@/lib/permissions';
+import { ok, serverError, badRequest, forbidden } from '@/lib/api-response';
 
 export async function GET() {
   const [session, authErr] = await getSessionOr401();
@@ -13,7 +14,7 @@ export async function GET() {
     .eq('tenant_id', session.user.tenantId)
     .order('due_at', { ascending: true, nullsFirst: false });
 
-  if (session.user.role === 'ventas') {
+  if (session.user.role === 'sales') {
     const { data: myLeadIds } = await supabase
       .from('leads')
       .select('id')
@@ -32,6 +33,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const [session, authErr] = await getSessionOr401();
   if (authErr) return authErr;
+  if (isReadOnly(session.user) || session.user.role === 'support') return forbidden();
 
   let body: unknown;
   try {

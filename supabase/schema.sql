@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   name TEXT,
-  role TEXT DEFAULT 'ventas' CHECK (role IN ('admin', 'ventas')),
+  role TEXT DEFAULT 'sales' CHECK (role IN ('admin', 'ventas', 'manager', 'sales', 'support', 'readonly')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

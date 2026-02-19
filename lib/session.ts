@@ -7,30 +7,43 @@ import { NextResponse } from 'next/server';
 import { authOptions } from '@/lib/auth';
 import type { Session } from 'next-auth';
 
+/** CRM roles. 'ventas' from DB is normalized to 'sales' in session. */
+export type AppRole = 'admin' | 'manager' | 'sales' | 'support' | 'readonly';
+
 /** Session with CRM fields (tenant, role). Use in API routes and server components. */
 export type SessionUser = Session['user'] & {
   id: string;
   tenantId: string;
   tenantName: string;
-  role: 'admin' | 'ventas';
+  role: AppRole;
 };
 
 export type SessionWithUser = Session & { user: SessionUser };
 
+const VALID_ROLES: AppRole[] = ['admin', 'manager', 'sales', 'support', 'readonly'];
+
+function normalizeRole(role: string | undefined): AppRole | null {
+  if (!role) return null;
+  if (role === 'ventas') return 'sales';
+  return VALID_ROLES.includes(role as AppRole) ? (role as AppRole) : null;
+}
+
 function isSessionUser(user: Session['user']): user is SessionUser {
-  return (
-    typeof (user as SessionUser).id === 'string' &&
-    typeof (user as SessionUser).tenantId === 'string' &&
-    ((user as SessionUser).role === 'admin' || (user as SessionUser).role === 'ventas')
-  );
+  const u = user as SessionUser;
+  if (typeof u?.id !== 'string' || typeof u?.tenantId !== 'string') return false;
+  return normalizeRole(u.role) !== null;
 }
 
 /**
  * Returns the current session or null. Use in server components.
+ * Normalizes role: ventas -> sales.
  */
 export async function getSession(): Promise<SessionWithUser | null> {
   const session = await getServerSession(authOptions);
   if (!session?.user || !isSessionUser(session.user)) return null;
+  const role = normalizeRole((session.user as SessionUser).role);
+  if (!role) return null;
+  (session.user as SessionUser).role = role;
   return session as SessionWithUser;
 }
 

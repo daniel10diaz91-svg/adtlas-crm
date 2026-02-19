@@ -23,17 +23,24 @@ const originColors: Record<string, string> = {
   manual: 'bg-zinc-100 text-zinc-600',
 };
 
+type ViewType = 'mine' | 'team' | 'all';
+
 export function LeadsList({
   leads,
-  isAdmin,
+  canAssignAndDelete,
   tenantUsers,
+  currentView = 'all',
+  role,
 }: {
   leads: Lead[];
-  isAdmin: boolean;
+  canAssignAndDelete: boolean;
   tenantUsers: TenantUser[];
+  currentView?: string;
+  role?: string;
 }) {
   const router = useRouter();
   const [originFilter, setOriginFilter] = useState<string>('');
+  const showViewSelector = role === 'admin' || role === 'manager';
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
 
@@ -68,8 +75,28 @@ export function LeadsList({
       year: 'numeric',
     });
 
+  const setView = (v: ViewType) => {
+    router.push(`/dashboard/leads?view=${v}`);
+  };
+
   return (
     <div className="space-y-4">
+      {showViewSelector && (
+        <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1">
+          {(['mine', 'team', 'all'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                currentView === v ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'
+              }`}
+            >
+              {v === 'mine' ? 'Mis registros' : v === 'team' ? 'Mi equipo' : 'Todos'}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         {['', 'meta', 'google', 'manual'].map((origin) => (
           <button
@@ -96,7 +123,7 @@ export function LeadsList({
                 <th className="px-5 py-3 font-medium text-zinc-600">Email</th>
                 <th className="px-5 py-3 font-medium text-zinc-600">Phone</th>
                 <th className="px-5 py-3 font-medium text-zinc-600">Origin</th>
-                {isAdmin && <th className="px-5 py-3 font-medium text-zinc-600">Assigned to</th>}
+                {canAssignAndDelete && <th className="px-5 py-3 font-medium text-zinc-600">Assigned to</th>}
                 <th className="px-5 py-3 font-medium text-zinc-600">Date</th>
                 <th className="w-10 px-5 py-3 font-medium text-zinc-600">Actions</th>
               </tr>
@@ -104,7 +131,7 @@ export function LeadsList({
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={isAdmin ? 7 : 6}>
+                  <td colSpan={canAssignAndDelete ? 7 : 6}>
                     <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
                       <div className="rounded-full bg-zinc-100 p-4">
                         <svg
@@ -148,7 +175,11 @@ export function LeadsList({
                     key={lead.id}
                     className="border-b border-zinc-100 transition-colors hover:bg-zinc-50/50"
                   >
-                    <td className="px-5 py-3 font-medium text-zinc-900">{lead.name || '—'}</td>
+                    <td className="px-5 py-3 font-medium text-zinc-900">
+                      <Link href={`/dashboard/leads/${lead.id}`} className="text-indigo-600 hover:underline">
+                        {lead.name || '—'}
+                      </Link>
+                    </td>
                     <td className="px-5 py-3 text-zinc-600">{lead.email || '—'}</td>
                     <td className="px-5 py-3 text-zinc-600">{lead.phone || '—'}</td>
                     <td className="px-5 py-3">
@@ -160,7 +191,7 @@ export function LeadsList({
                         {lead.origin}
                       </span>
                     </td>
-                    {isAdmin && (
+                    {canAssignAndDelete && (
                       <td className="px-5 py-3">
                         <select
                           value={lead.assigned_to_user_id ?? ''}

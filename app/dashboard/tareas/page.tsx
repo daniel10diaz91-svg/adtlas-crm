@@ -15,7 +15,7 @@ export default async function TareasPage() {
     .eq('tenant_id', session.user.tenantId)
     .order('due_at', { ascending: true, nullsFirst: false });
   let tasks: Awaited<ReturnType<typeof supabase.from<'tasks'>>>['data'] = null;
-  if (role === 'ventas') {
+  if (role === 'sales') {
     const { data: myLeadIds } = await supabase
       .from('leads')
       .select('id')
@@ -33,16 +33,20 @@ export default async function TareasPage() {
     tasks = tasksData;
   }
 
+  const canCreateTask = role !== 'readonly' && role !== 'support';
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-zinc-600">Pending items and reminders.</p>
-        <Link
-          href="/dashboard/tareas/nuevo"
-          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
-        >
-          New task
-        </Link>
+        <p className="text-zinc-600">Tareas pendientes y recordatorios.</p>
+        {canCreateTask && (
+          <Link
+            href="/dashboard/tareas/nuevo"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            Nueva tarea
+          </Link>
+        )}
       </div>
       <TasksList tasks={tasks ?? []} />
     </div>

@@ -13,7 +13,7 @@ export default async function DashboardHome() {
   const tenantId = session.user.tenantId;
   const role = session.user.role;
   const userId = session.user.id;
-  const leadFilter = role === 'ventas' ? { tenant_id: tenantId, assigned_to_user_id: userId } : { tenant_id: tenantId };
+  const leadFilter = role === 'sales' ? { tenant_id: tenantId, assigned_to_user_id: userId } : { tenant_id: tenantId };
 
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -45,16 +45,18 @@ export default async function DashboardHome() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, count]) => ({ date, count }));
 
+  const showQuickActions = role !== 'readonly' && role !== 'support';
+
   return (
     <div className="space-y-6">
       <p className="text-zinc-600">
-        Hi, {session.user?.name ?? session.user?.email}. Here’s your overview.
+        Hola, {session.user?.name ?? session.user?.email}. Resumen según tu rol.
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard title="Total leads" value={totalLeads ?? 0} />
-        <KpiCard title="New this week" value={newThisWeek ?? 0} />
-        <KpiCard title="In pipeline" value={inPipeline} subtitle="Not won/lost" />
+        <KpiCard title="Nuevos esta semana" value={newThisWeek ?? 0} />
+        <KpiCard title="En pipeline" value={inPipeline} subtitle="No ganados/perdidos" />
       </div>
 
       <LeadsChart data={chartData} />
@@ -63,25 +65,27 @@ export default async function DashboardHome() {
         <div className="lg:col-span-2">
           <RecentLeadsTable leads={recentLeads ?? []} />
         </div>
-        <div className="space-y-4">
-          <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-zinc-900">Quick actions</h3>
-            <div className="mt-4 flex flex-col gap-2">
-              <Link
-                href="/dashboard/leads/nuevo"
-                className="flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white hover:bg-indigo-700"
-              >
-                Add lead
-              </Link>
-              <Link
-                href="/dashboard/pipeline"
-                className="flex items-center justify-center rounded-lg border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-              >
-                Open pipeline
-              </Link>
+        {showQuickActions && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-zinc-900">Acciones rápidas</h3>
+              <div className="mt-4 flex flex-col gap-2">
+                <Link
+                  href="/dashboard/leads/nuevo"
+                  className="flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white hover:bg-indigo-700"
+                >
+                  Nuevo lead
+                </Link>
+                <Link
+                  href="/dashboard/pipeline"
+                  className="flex items-center justify-center rounded-lg border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  Abrir pipeline
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

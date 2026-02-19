@@ -1,29 +1,46 @@
 /**
- * Permission checks for leads and tasks (admin vs ventas, ownership).
+ * Permission checks for leads and tasks (RBAC: admin, manager, sales, support, readonly).
  * All lead/task mutations should go through these before executing.
  */
 import type { SessionUser } from '@/lib/session';
+import type { AppRole } from '@/lib/session';
 import { createServiceClient } from '@/lib/supabase/service';
 
-export type AppRole = 'admin' | 'ventas';
+export type { AppRole };
 
 export function isAdmin(user: SessionUser): boolean {
   return user.role === 'admin';
 }
 
-export function isVentas(user: SessionUser): boolean {
-  return user.role === 'ventas';
+export function isManager(user: SessionUser): boolean {
+  return user.role === 'manager';
 }
 
-/**
- * Only admin can set or change assignment. Ventas can only self-assign on create.
- */
+export function isSales(user: SessionUser): boolean {
+  return user.role === 'sales';
+}
+
+export function isSupport(user: SessionUser): boolean {
+  return user.role === 'support';
+}
+
+/** ReadOnly cannot perform any write (POST/PATCH/DELETE). */
+export function isReadOnly(user: SessionUser): boolean {
+  return user.role === 'readonly';
+}
+
+/** Admin or manager can set/change lead assignment. Manager: same tenant (team filter later). */
 export function canSetLeadAssignment(user: SessionUser): boolean {
-  return user.role === 'admin';
+  return user.role === 'admin' || user.role === 'manager';
+}
+
+/** Sales/Support/ReadOnly cannot write leads; Support will get case write in Phase 2. */
+export function canWriteLeads(user: SessionUser): boolean {
+  return !isReadOnly(user) && user.role !== 'support';
 }
 
 /**
- * Ventas can only delete leads assigned to them. Admin can delete any lead in tenant.
+ * Admin and manager can delete any lead in tenant. Sales: only own. Support/ReadOnly: no.
  */
 export async function canDeleteLead(
   userId: string,
@@ -31,7 +48,8 @@ export async function canDeleteLead(
   leadId: string,
   tenantId: string
 ): Promise<{ allowed: boolean; notFound?: boolean }> {
-  if (role === 'admin') return { allowed: true };
+  if (role === 'admin' || role === 'manager') return { allowed: true };
+  if (role === 'support' || role === 'readonly') return { allowed: false };
   const supabase = createServiceClient();
   const { data: lead, error } = await supabase
     .from('leads')
@@ -44,7 +62,7 @@ export async function canDeleteLead(
 }
 
 /**
- * Ventas can only update (e.g. stage) leads assigned to them. Admin can update any.
+ * Admin and manager can update any lead in tenant. Sales: only own. Support/ReadOnly: no.
  */
 export async function canUpdateLead(
   userId: string,
@@ -52,7 +70,8 @@ export async function canUpdateLead(
   leadId: string,
   tenantId: string
 ): Promise<{ allowed: boolean; notFound?: boolean }> {
-  if (role === 'admin') return { allowed: true };
+  if (role === 'admin' || role === 'manager') return { allowed: true };
+  if (role === 'support' || role === 'readonly') return { allowed: false };
   const supabase = createServiceClient();
   const { data: lead, error } = await supabase
     .from('leads')
@@ -65,7 +84,7 @@ export async function canUpdateLead(
 }
 
 /**
- * Ventas can only update tasks whose lead is assigned to them. Admin can update any task in tenant.
+ * Admin and manager can update any task in tenant. Sales: only tasks whose lead is assigned to them. Support/ReadOnly: no.
  */
 export async function canUpdateTask(
   userId: string,
@@ -73,7 +92,8 @@ export async function canUpdateTask(
   taskId: string,
   tenantId: string
 ): Promise<{ allowed: boolean; notFound?: boolean }> {
-  if (role === 'admin') return { allowed: true };
+  if (role === 'admin' || role === 'manager') return { allowed: true };
+  if (role === 'support' || role === 'readonly') return { allowed: false };
   const supabase = createServiceClient();
   const { data: task, error: taskError } = await supabase
     .from('tasks')
@@ -93,7 +113,7 @@ export async function canUpdateTask(
 }
 
 /**
- * Validates that assigned_to_user_id belongs to the same tenant (for admin assignment).
+ * Validates that assigned_to_user_id belongs to the same tenant (for admin/manager assignment).
  */
 export async function isUserInTenant(
   userToAssignId: string,
