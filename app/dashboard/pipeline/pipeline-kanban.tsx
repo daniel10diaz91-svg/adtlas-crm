@@ -1,0 +1,217 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
+
+type Stage = { id: string; name: string; order: number };
+type Lead = { id: string; name: string | null; email: string | null; stage_id: string | null };
+
+function LeadCard({
+  lead,
+  isDragOverlay,
+  stages,
+  firstStageId,
+  onStageChange,
+}: {
+  lead: Lead;
+  isDragOverlay?: boolean;
+  stages?: Stage[];
+  firstStageId?: string;
+  onStageChange?: (leadId: string, stageId: string) => void;
+}) {
+  return (
+    <div
+      className={`rounded-lg border bg-white p-3 text-sm shadow-sm ${
+        isDragOverlay ? 'border-indigo-300 shadow-md' : 'border-zinc-200'
+      }`}
+    >
+      <p className="font-medium text-zinc-900">{lead.name || 'No name'}</p>
+      {lead.email && <p className="mt-0.5 text-zinc-500">{lead.email}</p>}
+      {!isDragOverlay && stages && firstStageId && onStageChange && (
+        <select
+          className="mt-2 w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-900"
+          value={lead.stage_id || firstStageId || ''}
+          onChange={(e) => onStageChange(lead.id, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {stages.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  );
+}
+
+function DraggableLeadCard({
+  lead,
+  stageId,
+  stages,
+  firstStageId,
+  onStageChange,
+}: {
+  lead: Lead;
+  stageId: string;
+  stages: Stage[];
+  firstStageId: string;
+  onStageChange: (leadId: string, stageId: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `lead-${lead.id}`,
+    data: { lead, stageId },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={isDragging ? 'opacity-50' : ''}
+    >
+      <LeadCard
+        lead={lead}
+        stages={stages}
+        firstStageId={firstStageId}
+        onStageChange={onStageChange}
+      />
+    </div>
+  );
+}
+
+function DroppableColumn({
+  stage,
+  firstStageId,
+  getLeadsForStage,
+  stages,
+  moveLead,
+}: {
+  stage: Stage;
+  leads: Lead[];
+  firstStageId: string;
+  getLeadsForStage: (stageId: string) => Lead[];
+  moveLead: (leadId: string, stageId: string) => void;
+  stages: Stage[];
+}) {
+  const stageLeads = getLeadsForStage(stage.id);
+  const { setNodeRef, isOver } = useDroppable({ id: `stage-${stage.id}` });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-w-[280px] shrink-0 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-colors ${
+        isOver ? 'border-indigo-300 bg-indigo-50/50' : 'bg-zinc-50/50'
+      }`}
+    >
+      <h2 className="font-medium text-zinc-900">{stage.name}</h2>
+      <p className="text-sm text-zinc-500">{stageLeads.length} leads</p>
+      <ul className="mt-3 space-y-2">
+        {stageLeads.map((lead) => (
+          <li key={lead.id}>
+            <DraggableLeadCard
+              lead={lead}
+              stageId={stage.id}
+              stages={stages}
+              firstStageId={firstStageId}
+              onStageChange={moveLead}
+            />
+          </li>
+        ))}
+        {stageLeads.length > 10 && (
+          <li className="py-1 text-center text-sm text-zinc-400">
+            +{stageLeads.length - 10} more
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
+export function PipelineKanban({ stages, leads }: { stages: Stage[]; leads: Lead[] }) {
+  const router = useRouter();
+  const firstStageId = stages[0]?.id;
+
+  const getLeadsForStage = (stageId: string) =>
+    leads.filter(
+      (l) => l.stage_id === stageId || (stageId === firstStageId && !l.stage_id)
+    );
+
+  async function moveLead(leadId: string, stageId: string) {
+    await fetch(`/api/leads/${leadId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stage_id: stageId }),
+    });
+    router.refresh();
+  }
+
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeLead = activeId?.startsWith('lead-')
+    ? leads.find((l) => `lead-${l.id}` === activeId)
+    : null;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  );
+
+  function handleDragStart(e: DragStartEvent) {
+    setActiveId(e.active.id as string);
+  }
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    setActiveId(null);
+    if (!over) return;
+    const activeIdStr = active.id as string;
+    const overIdStr = over.id as string;
+    if (!activeIdStr.startsWith('lead-')) return;
+    const leadId = activeIdStr.slice(5);
+    let newStageId: string | null = null;
+    if (overIdStr.startsWith('stage-')) {
+      newStageId = overIdStr.slice(7);
+    } else if (overIdStr.startsWith('lead-')) {
+      const overLead = leads.find((l) => `lead-${l.id}` === overIdStr);
+      newStageId = overLead?.stage_id ?? firstStageId ?? null;
+    }
+    if (newStageId) moveLead(leadId, newStageId);
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {stages.map((stage) => (
+          <DroppableColumn
+            key={stage.id}
+            stage={stage}
+            leads={leads}
+            firstStageId={firstStageId ?? ''}
+            getLeadsForStage={getLeadsForStage}
+            moveLead={moveLead}
+            stages={stages}
+          />
+        ))}
+      </div>
+
+      <DragOverlay>
+        {activeLead ? <LeadCard lead={activeLead} isDragOverlay /> : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
