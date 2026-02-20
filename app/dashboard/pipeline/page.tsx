@@ -1,12 +1,11 @@
 import { getSession } from '@/lib/session';
 import { createServiceClient } from '@/lib/supabase/service';
-import { getServerT } from '@/lib/i18n-server';
 import { PipelineKanban } from './pipeline-kanban';
+import { PipelineHeader } from './pipeline-header';
 
 export default async function PipelinePage() {
   const session = await getSession();
   if (!session) return null;
-  const t = await getServerT();
   const supabase = createServiceClient();
   const role = session.user.role;
   const userId = session.user.id;
@@ -45,10 +44,7 @@ export default async function PipelinePage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-zinc-900">{t('pipeline.title')}</h1>
-      <p className="mt-1 text-zinc-600">
-        {t('pipeline.dragHint')}
-      </p>
+      <PipelineHeader />
       <PipelineKanban
         stages={stages ?? []}
         leads={leads ?? []}

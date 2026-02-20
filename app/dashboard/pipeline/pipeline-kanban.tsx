@@ -224,6 +224,12 @@ export function PipelineKanban({
       return false;
     }
     setMoveError(null);
+    // Actualizar la lista en pantalla al instante (desplegable y drag)
+    setLeads((prev) =>
+      prev.map((l) =>
+        l.id === leadId ? { ...l, stage_id: stageId } : l
+      )
+    );
     return true;
   }
 
@@ -253,7 +259,7 @@ export function PipelineKanban({
     const leadId = activeIdStr.slice(5);
     let newStageId: string | null = null;
     if (overIdStr.startsWith('stage-')) {
-      newStageId = overIdStr.slice(7);
+      newStageId = overIdStr.slice(6); // "stage-" = 6 chars
     } else if (overIdStr.startsWith('lead-')) {
       const overLead = leads.find((l) => `lead-${l.id}` === overIdStr);
       newStageId = overLead?.stage_id ?? firstStageId ?? null;
