@@ -23,24 +23,29 @@ import {
 import { useLanguage } from '@/components/LanguageProvider';
 
 type Stage = { id: string; name: string; order: number };
-type Lead = { id: string; name: string | null; email: string | null; stage_id: string | null; created_at?: string };
+type Lead = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  account_number: string | null;
+  value: number | string | null;
+  stage_id: string | null;
+  created_at?: string;
+};
 
 function LeadCard({
   lead,
   lastMessage,
   isDragOverlay,
-  stages,
-  firstStageId,
-  onStageChange,
   noNameLabel,
+  actionLabels,
 }: {
   lead: Lead;
   lastMessage?: LastMessageForSla | null;
   isDragOverlay?: boolean;
-  stages?: Stage[];
-  firstStageId?: string;
-  onStageChange?: (leadId: string, stageId: string) => void;
   noNameLabel: string;
+  actionLabels?: { call: string; email: string; whatsapp: string };
 }) {
   const sla = lead.created_at
     ? getSlaStatusFromLead(lead, lastMessage)
@@ -55,6 +60,8 @@ function LeadCard({
       ? slaTooltipMessageRed
       : `${getSlaLabel(lead.created_at!)} — ${slaTooltips[sla]}`
     : '';
+  const displayName = lead.name || lead.account_number || noNameLabel;
+  const valueNum = lead.value != null ? Number(lead.value) : null;
 
   return (
     <div
@@ -65,7 +72,7 @@ function LeadCard({
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 flex-1 font-medium text-zinc-900">
           <Link href={`/dashboard/leads/${lead.id}`} className="text-indigo-600 hover:underline">
-            {lead.name || noNameLabel}
+            {displayName}
           </Link>
         </p>
         {sla && (
@@ -75,20 +82,51 @@ function LeadCard({
           />
         )}
       </div>
-      {lead.email && <p className="mt-0.5 truncate text-zinc-500">{lead.email}</p>}
-      {!isDragOverlay && stages && firstStageId && onStageChange && (
-        <select
-          className="mt-2 w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-900"
-          value={lead.stage_id || firstStageId || ''}
-          onChange={(e) => onStageChange(lead.id, e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {stages.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+      {lead.account_number && (
+        <p className="mt-0.5 text-xs text-zinc-500">#{lead.account_number}</p>
+      )}
+      {lead.phone && <p className="mt-0.5 truncate text-zinc-500">{lead.phone}</p>}
+      {lead.email && !lead.phone && <p className="mt-0.5 truncate text-zinc-500">{lead.email}</p>}
+      {lead.email && lead.phone && <p className="mt-0.5 truncate text-zinc-400 text-xs">{lead.email}</p>}
+      {valueNum != null && !Number.isNaN(valueNum) && (
+        <p className="mt-1 text-xs font-medium text-zinc-700">
+          {typeof Intl !== 'undefined' && Intl.NumberFormat
+            ? new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(valueNum)
+            : `$${valueNum}`}
+        </p>
+      )}
+      {!isDragOverlay && actionLabels && (lead.phone || lead.email) && (
+        <div className="mt-2 flex flex-wrap gap-1.5 border-t border-zinc-100 pt-2">
+          {lead.phone && (
+            <a
+              href={`tel:${lead.phone.startsWith('+') ? '' : '+'}${lead.phone.replace(/\D/g, '')}`}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 hover:bg-zinc-200"
+            >
+              {actionLabels.call}
+            </a>
+          )}
+          {lead.email && (
+            <a
+              href={`mailto:${lead.email}`}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 hover:bg-zinc-200"
+            >
+              {actionLabels.email}
+            </a>
+          )}
+          {lead.phone && (
+            <a
+              href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 hover:bg-green-200"
+            >
+              {actionLabels.whatsapp}
+            </a>
+          )}
+        </div>
       )}
     </div>
   );
@@ -98,18 +136,14 @@ function DraggableLeadCard({
   lead,
   lastMessage,
   stageId,
-  stages,
-  firstStageId,
-  onStageChange,
   noNameLabel,
+  actionLabels,
 }: {
   lead: Lead;
   lastMessage?: LastMessageForSla | null;
   stageId: string;
-  stages: Stage[];
-  firstStageId: string;
-  onStageChange: (leadId: string, stageId: string) => void;
   noNameLabel: string;
+  actionLabels: { call: string; email: string; whatsapp: string };
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `lead-${lead.id}`,
@@ -123,14 +157,7 @@ function DraggableLeadCard({
       {...attributes}
       className={isDragging ? 'opacity-50' : ''}
     >
-      <LeadCard
-        lead={lead}
-        lastMessage={lastMessage}
-        stages={stages}
-        firstStageId={firstStageId}
-        onStageChange={onStageChange}
-        noNameLabel={noNameLabel}
-      />
+      <LeadCard lead={lead} lastMessage={lastMessage} noNameLabel={noNameLabel} actionLabels={actionLabels} />
     </div>
   );
 }
@@ -143,6 +170,7 @@ function DroppableColumn({
   moveLead,
   noNameLabel,
   lastMessageByLeadId,
+  leadCountLabel,
 }: {
   stage: Stage;
   leads: Lead[];
@@ -152,6 +180,8 @@ function DroppableColumn({
   stages: Stage[];
   noNameLabel: string;
   lastMessageByLeadId: Record<string, LastMessageForSla>;
+  leadCountLabel: string;
+  actionLabels: { call: string; email: string; whatsapp: string };
 }) {
   const stageLeads = getLeadsForStage(stage.id);
   const { setNodeRef, isOver } = useDroppable({ id: `stage-${stage.id}` });
@@ -164,7 +194,7 @@ function DroppableColumn({
       }`}
     >
       <h2 className="font-medium text-zinc-900">{stage.name}</h2>
-      <p className="text-sm text-zinc-500">{stageLeads.length} leads</p>
+      <p className="text-sm text-zinc-500">{stageLeads.length} {leadCountLabel}</p>
       <ul className="mt-3 space-y-2">
         {stageLeads.map((lead) => (
           <li key={lead.id}>
@@ -172,10 +202,8 @@ function DroppableColumn({
               lead={lead}
               lastMessage={lastMessageByLeadId[lead.id]}
               stageId={stage.id}
-              stages={stages}
-              firstStageId={firstStageId}
-              onStageChange={moveLead}
               noNameLabel={noNameLabel}
+              actionLabels={actionLabels}
             />
           </li>
         ))}
@@ -202,6 +230,8 @@ export function PipelineKanban({
 }) {
   const { t } = useLanguage();
   const noNameLabel = t('common.noName');
+  const leadCountLabel = t('pipeline.leadCount');
+  const actionLabels = { call: t('detail.call'), email: t('detail.emailAction'), whatsapp: t('detail.whatsapp') };
   const firstStageId = stages[0]?.id;
 
   const [leads, setLeads] = useState<Lead[]>(initialLeads);
@@ -303,6 +333,8 @@ export function PipelineKanban({
             stages={stages}
             noNameLabel={noNameLabel}
             lastMessageByLeadId={lastMessageByLeadId}
+            leadCountLabel={leadCountLabel}
+            actionLabels={actionLabels}
           />
         ))}
       </div>
@@ -314,6 +346,7 @@ export function PipelineKanban({
             lastMessage={lastMessageByLeadId[activeLead.id]}
             isDragOverlay
             noNameLabel={noNameLabel}
+            actionLabels={actionLabels}
           />
         ) : null}
       </DragOverlay>

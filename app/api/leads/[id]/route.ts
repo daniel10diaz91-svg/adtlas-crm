@@ -57,13 +57,16 @@ export async function PATCH(
   } catch {
     return badRequest('Invalid JSON');
   }
-  const { stage_id, assigned_to_user_id: bodyAssigned } = body as Record<string, unknown>;
+  const { stage_id, assigned_to_user_id: bodyAssigned, account_number: bodyAccountNumber } = body as Record<string, unknown>;
   const supabase = createServiceClient();
-  const updates: { stage_id?: string | null; assigned_to_user_id?: string | null } = {};
+  const updates: { stage_id?: string | null; assigned_to_user_id?: string | null; account_number?: string | null } = {};
   if (stage_id !== undefined) updates.stage_id = stage_id && typeof stage_id === 'string' ? stage_id : null;
   if (canSetLeadAssignment(session.user) && bodyAssigned !== undefined) {
     updates.assigned_to_user_id =
       bodyAssigned && typeof bodyAssigned === 'string' ? bodyAssigned : null;
+  }
+  if (bodyAccountNumber !== undefined) {
+    updates.account_number = bodyAccountNumber && typeof bodyAccountNumber === 'string' ? bodyAccountNumber.trim() || null : null;
   }
   const { data, error } = await supabase
     .from('leads')

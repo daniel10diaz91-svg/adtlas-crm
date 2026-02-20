@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS leads (
   name TEXT,
   email TEXT,
   phone TEXT,
+  account_number TEXT,
   title TEXT,
   value DECIMAL(12,2),
   status TEXT DEFAULT 'new',

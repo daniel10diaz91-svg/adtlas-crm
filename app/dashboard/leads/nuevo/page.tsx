@@ -12,6 +12,7 @@ export default function NuevoLeadPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
   const [assignedTo, setAssignedTo] = useState<string>('');
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,10 +29,11 @@ export default function NuevoLeadPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const body: { name?: string; email?: string; phone?: string; assigned_to_user_id?: string | null } = {
+    const body: { name?: string; email?: string; phone?: string; account_number?: string | null; assigned_to_user_id?: string | null } = {
       name,
       email,
       phone,
+      account_number: accountNumber.trim() || undefined,
     };
     if (tenantUsers.length > 0) {
       body.assigned_to_user_id = assignedTo || null;
@@ -79,6 +81,16 @@ export default function NuevoLeadPage() {
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
+            className="input-field"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm text-zinc-600">{t('detail.accountNumber')}</label>
+          <input
+            type="text"
+            value={accountNumber}
+            onChange={(e) => setAccountNumber(e.target.value)}
+            placeholder="—"
             className="input-field"
           />
         </div>

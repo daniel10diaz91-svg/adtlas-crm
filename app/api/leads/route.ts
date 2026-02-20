@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   } catch {
     return badRequest('Invalid JSON');
   }
-  const { name, email, phone, assigned_to_user_id: bodyAssigned } = body as Record<string, unknown>;
+  const { name, email, phone, account_number: bodyAccountNumber, assigned_to_user_id: bodyAssigned } = body as Record<string, unknown>;
   let assignedToUserId: string | null = null;
   if (canSetLeadAssignment(session.user) && bodyAssigned !== undefined) {
     const id = bodyAssigned && typeof bodyAssigned === 'string' ? bodyAssigned : null;
@@ -70,6 +70,7 @@ export async function POST(req: Request) {
       name: typeof name === 'string' ? name || null : null,
       email: typeof email === 'string' ? email || null : null,
       phone: typeof phone === 'string' ? phone || null : null,
+      account_number: bodyAccountNumber !== undefined && typeof bodyAccountNumber === 'string' ? bodyAccountNumber.trim() || null : null,
     })
     .select()
     .single();

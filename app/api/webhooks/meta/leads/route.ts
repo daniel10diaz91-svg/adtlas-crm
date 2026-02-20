@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
     const { data: source } = await supabase
       .from('lead_sources')
-      .select('tenant_id')
+      .select('id, tenant_id')
       .eq('origin', 'meta')
       .eq('external_id', externalId)
       .single();
@@ -59,6 +59,7 @@ export async function POST(req: Request) {
 
     const { error } = await supabase.from('leads').insert({
       tenant_id: source.tenant_id,
+      lead_source_id: source.id,
       origin: 'meta',
       stage_id: firstStage?.id ?? null,
       name: name || null,

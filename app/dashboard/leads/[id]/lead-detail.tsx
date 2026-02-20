@@ -10,6 +10,7 @@ type Lead = {
   name: string | null;
   email: string | null;
   phone: string | null;
+  account_number: string | null;
   origin: string;
   stage_id: string | null;
   assigned_to_user_id: string | null;
@@ -141,6 +142,7 @@ export function LeadDetail({
   const [tab, setTab] = useState<(typeof TABS)[number]>('details');
   const [stageId, setStageId] = useState(lead.stage_id ?? '');
   const [assignId, setAssignId] = useState(lead.assigned_to_user_id ?? '');
+  const [accountNumber, setAccountNumber] = useState(lead.account_number ?? '');
   const [updating, setUpdating] = useState(false);
 
   const handleStageChange = async (newStageId: string) => {
@@ -173,7 +175,24 @@ export function LeadDetail({
     }
   };
 
+  const handleAccountNumberBlur = async () => {
+    if (!canEdit) return;
+    const value = accountNumber.trim() || null;
+    if (value === (lead.account_number ?? '')) return;
+    setUpdating(true);
+    const res = await fetch(`/api/leads/${lead.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_number: value }),
+    });
+    setUpdating(false);
+    if (res.ok) router.refresh();
+  };
+
   const assignedTo = tenantUsers.find((u) => u.id === lead.assigned_to_user_id);
+
+  const phoneForWa = lead.phone ? lead.phone.replace(/\D/g, '') : '';
+  const hasQuickActions = lead.phone || lead.email;
 
   return (
     <div className="space-y-6">
@@ -182,8 +201,39 @@ export function LeadDetail({
           <Link href="/dashboard/leads" className="text-sm text-indigo-600 hover:underline">
             ← {t('detail.backToLeads')}
           </Link>
-          <h1 className="mt-1 text-xl font-semibold text-zinc-900">{lead.name || t('common.noName')}</h1>
+          <h1 className="mt-1 text-xl font-semibold text-zinc-900">{lead.name || lead.account_number || t('common.noName')}</h1>
+          {lead.account_number && <p className="text-xs text-zinc-500">#{lead.account_number}</p>}
           {lead.email && <p className="text-sm text-zinc-500">{lead.email}</p>}
+          {hasQuickActions && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {lead.phone && (
+                <a
+                  href={`tel:${lead.phone.startsWith('+') ? '' : '+'}${lead.phone.replace(/\D/g, '')}`}
+                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  {t('detail.call')}
+                </a>
+              )}
+              {lead.email && (
+                <a
+                  href={`mailto:${lead.email}`}
+                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  {t('detail.emailAction')}
+                </a>
+              )}
+              {phoneForWa && (
+                <a
+                  href={`https://wa.me/${phoneForWa}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-800 hover:bg-green-100"
+                >
+                  {t('detail.whatsapp')}
+                </a>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {canEdit && stages.length > 0 && (
@@ -248,6 +298,24 @@ export function LeadDetail({
       {tab === 'details' && (
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <dl className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <dt className="text-xs font-medium text-zinc-500">{t('detail.accountNumber')}</dt>
+              <dd className="mt-0.5">
+                {canEdit ? (
+                  <input
+                    type="text"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    onBlur={handleAccountNumberBlur}
+                    disabled={updating}
+                    placeholder="—"
+                    className="w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900"
+                  />
+                ) : (
+                  <span className="text-sm text-zinc-900">{lead.account_number || '—'}</span>
+                )}
+              </dd>
+            </div>
             <div>
               <dt className="text-xs font-medium text-zinc-500">{t('leads.name')}</dt>
               <dd className="mt-0.5 text-sm text-zinc-900">{lead.name || '—'}</dd>
