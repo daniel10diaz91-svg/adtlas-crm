@@ -51,10 +51,7 @@ export async function POST(req: Request) {
   const supabase = createServiceClient();
   const leadQuota = await checkLeadQuota(session.user.tenantId, supabase);
   if (!leadQuota.allowed) {
-    return NextResponse.json(
-      { error: 'Límite de leads del workspace alcanzado' },
-      { status: 403 }
-    );
+    return forbidden('Límite de leads del workspace alcanzado');
   }
   const { data: firstStage } = await supabase
     .from('pipeline_stages')

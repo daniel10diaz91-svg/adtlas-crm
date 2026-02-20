@@ -31,7 +31,7 @@ export function getSlaStatus(createdAt: string): SlaStatus {
  * Si no aplica, usa el SLA por fecha de creación del lead.
  */
 export function getSlaStatusFromLead(
-  lead: { created_at: string },
+  lead: { created_at?: string | null },
   lastMessage?: LastMessageForSla | null
 ): SlaStatus {
   if (
@@ -42,6 +42,7 @@ export function getSlaStatusFromLead(
     const msgAgeMs = Date.now() - new Date(lastMessage.created_at).getTime();
     if (msgAgeMs >= MESSAGE_SLA_RED_HOURS * 60 * 60 * 1000) return 'red';
   }
+  if (!lead.created_at) return 'green';
   return getSlaStatus(lead.created_at);
 }
 
