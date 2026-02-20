@@ -3,7 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getSlaStatus, slaColorsLight, slaShortLabels, slaTooltips } from '@/lib/sla';
+import {
+  getSlaStatusFromLead,
+  slaColorsLight,
+  slaShortLabels,
+  slaTooltips,
+  slaTooltipMessageRed,
+  type LastMessageForSla,
+} from '@/lib/sla';
 import { useLanguage } from '@/components/LanguageProvider';
 
 type Lead = {
@@ -33,12 +40,14 @@ export function LeadsList({
   tenantUsers,
   currentView = 'all',
   role,
+  lastMessageByLeadId = {},
 }: {
   leads: Lead[];
   canAssignAndDelete: boolean;
   tenantUsers: TenantUser[];
   currentView?: string;
   role?: string;
+  lastMessageByLeadId?: Record<string, LastMessageForSla>;
 }) {
   const router = useRouter();
   const { t } = useLanguage();
@@ -175,13 +184,22 @@ export function LeadsList({
                 </tr>
               ) : (
                 filtered.map((lead) => {
-                  const sla = getSlaStatus(lead.created_at);
+                  const lastMsg = lastMessageByLeadId[lead.id];
+                  const sla = getSlaStatusFromLead(lead, lastMsg);
+                  const isRedFromMessage =
+                    sla === 'red' &&
+                    lastMsg &&
+                    lastMsg.type === 'inbound' &&
+                    !lastMsg.is_read;
+                  const slaTitle = isRedFromMessage
+                    ? slaTooltipMessageRed
+                    : slaTooltips[sla];
                   return (
                   <tr
                     key={lead.id}
                     className="border-b border-zinc-100 transition-colors hover:bg-zinc-50/50"
                   >
-                    <td className="px-3 py-3" title={slaTooltips[sla]}>
+                    <td className="px-3 py-3" title={slaTitle}>
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${slaColorsLight[sla]}`}>
                         {slaShortLabels[sla]}
                       </span>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { checkLeadQuota } from '@/lib/quota';
 
 // Meta Lead Ads envía POST con el payload del lead.
 // Ver: https://developers.facebook.com/docs/marketing-api/lead-ads/retrieving
@@ -28,6 +29,14 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'No tenant configured for this form_id/page_id' },
         { status: 404 }
+      );
+    }
+
+    const leadQuota = await checkLeadQuota(source.tenant_id, supabase);
+    if (!leadQuota.allowed) {
+      return NextResponse.json(
+        { error: 'Límite de leads del workspace alcanzado' },
+        { status: 403 }
       );
     }
 

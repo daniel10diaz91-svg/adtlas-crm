@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getSessionOr401 } from '@/lib/session';
+import { checkUserQuota } from '@/lib/quota';
 import { ok, serverError } from '@/lib/api-response';
 
 export async function GET() {
@@ -43,6 +44,13 @@ export async function POST(req: Request) {
   const roleStr = role && typeof role === 'string' && allowedRoles.includes(role) ? role : 'sales';
 
   const supabase = createServiceClient();
+  const userQuota = await checkUserQuota(session.user.tenantId, supabase);
+  if (!userQuota.allowed) {
+    return NextResponse.json(
+      { error: 'Límite de usuarios del workspace alcanzado' },
+      { status: 403 }
+    );
+  }
   const { data: authData, error: errAuth } = await supabase.auth.admin.createUser({
     email: email.trim(),
     password: String(password),

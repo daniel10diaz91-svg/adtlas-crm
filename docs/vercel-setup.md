@@ -26,6 +26,10 @@ En **Settings → Environment Variables** añade estas variables y asígnalas al
 
 **Importante:** En producción, `NEXTAUTH_URL` debe ser exactamente la URL que usan los usuarios (con `https://`). Si usas un dominio propio (ej. `https://crm.tudominio.com`), pon esa URL.
 
+### Variables opcionales (WhatsApp webhook)
+
+Si usas el webhook de WhatsApp: `WHATSAPP_VERIFY_TOKEN` (token que configuras en Meta) y, si tienes un solo workspace, `WHATSAPP_TENANT_ID`. Ver [docs/whatsapp-webhook.md](whatsapp-webhook.md).
+
 Después de añadir o cambiar variables, hay que **redeploy** (Deployments → ⋮ en el último deploy → Redeploy) para que se apliquen.
 
 ---

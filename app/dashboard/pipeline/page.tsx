@@ -24,13 +24,36 @@ export default async function PipelinePage() {
     .match(leadFilter)
     .order('created_at', { ascending: false });
 
+  const leadIds = (leads ?? []).map((l) => l.id);
+  let lastMessageByLeadId: Record<string, { type: string; is_read: boolean; created_at: string }> = {};
+  if (leadIds.length > 0) {
+    const { data: lastMsgs } = await supabase
+      .from('messages')
+      .select('lead_id, type, is_read, created_at')
+      .in('lead_id', leadIds)
+      .order('created_at', { ascending: false });
+    for (const m of lastMsgs ?? []) {
+      if (m.lead_id && !(m.lead_id in lastMessageByLeadId)) {
+        lastMessageByLeadId[m.lead_id] = {
+          type: m.type,
+          is_read: m.is_read,
+          created_at: m.created_at,
+        };
+      }
+    }
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-zinc-900">{t('pipeline.title')}</h1>
       <p className="mt-1 text-zinc-600">
         {t('pipeline.dragHint')}
       </p>
-      <PipelineKanban stages={stages ?? []} leads={leads ?? []} />
+      <PipelineKanban
+        stages={stages ?? []}
+        leads={leads ?? []}
+        lastMessageByLeadId={lastMessageByLeadId}
+      />
     </div>
   );
 }

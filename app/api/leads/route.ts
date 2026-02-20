@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { getSessionOr401 } from '@/lib/session';
 import { isUserInTenant, canSetLeadAssignment, canWriteLeads } from '@/lib/permissions';
+import { checkLeadQuota } from '@/lib/quota';
 import { ok, serverError, badRequest, forbidden } from '@/lib/api-response';
 
 export async function GET(req: Request) {
@@ -48,6 +49,13 @@ export async function POST(req: Request) {
   }
 
   const supabase = createServiceClient();
+  const leadQuota = await checkLeadQuota(session.user.tenantId, supabase);
+  if (!leadQuota.allowed) {
+    return NextResponse.json(
+      { error: 'Límite de leads del workspace alcanzado' },
+      { status: 403 }
+    );
+  }
   const { data: firstStage } = await supabase
     .from('pipeline_stages')
     .select('id')

@@ -9,16 +9,40 @@
  */
 export type SlaStatus = 'green' | 'yellow' | 'red';
 
+/** Último mensaje para evaluar SLA por bandeja (inbound no leído > 2 h = rojo) */
+export type LastMessageForSla = { type: string; is_read: boolean; created_at: string };
+
 /** Minutos máximos para considerar "dentro de SLA" (respuesta rápida) */
 const GREEN_MAX_MINUTES = 15;
 /** Minutos máximos para "revisar pronto"; por encima = urgente */
 const YELLOW_MAX_MINUTES = 60;
+/** Horas sin responder mensaje inbound no leído para marcar urgente */
+const MESSAGE_SLA_RED_HOURS = 2;
 
 export function getSlaStatus(createdAt: string): SlaStatus {
   const minutes = getSlaMinutes(createdAt);
   if (minutes < GREEN_MAX_MINUTES) return 'green';
   if (minutes < YELLOW_MAX_MINUTES) return 'yellow';
   return 'red';
+}
+
+/**
+ * SLA considerando mensajes: si hay último mensaje inbound no leído y > 2 h, devuelve 'red'.
+ * Si no aplica, usa el SLA por fecha de creación del lead.
+ */
+export function getSlaStatusFromLead(
+  lead: { created_at: string },
+  lastMessage?: LastMessageForSla | null
+): SlaStatus {
+  if (
+    lastMessage &&
+    lastMessage.type === 'inbound' &&
+    !lastMessage.is_read
+  ) {
+    const msgAgeMs = Date.now() - new Date(lastMessage.created_at).getTime();
+    if (msgAgeMs >= MESSAGE_SLA_RED_HOURS * 60 * 60 * 1000) return 'red';
+  }
+  return getSlaStatus(lead.created_at);
 }
 
 export function getSlaMinutes(createdAt: string): number {
@@ -41,6 +65,10 @@ export const slaTooltips: Record<SlaStatus, string> = {
   yellow: 'Priorizar: lleva entre 15 min y 1 h sin contacto',
   red: 'Urgente: más de 1 h sin contacto; el lead se enfría',
 };
+
+/** Tooltip cuando el rojo es por mensaje inbound no leído > 2 h */
+export const slaTooltipMessageRed =
+  'Urgente: mensaje entrante sin leer hace más de 2 h';
 
 export const slaColors: Record<SlaStatus, string> = {
   green: 'bg-emerald-500',

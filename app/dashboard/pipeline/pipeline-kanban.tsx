@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   DndContext,
   DragEndEvent,
@@ -13,7 +12,14 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { getSlaStatus, getSlaLabel, slaColors, slaTooltips } from '@/lib/sla';
+import {
+  getSlaStatusFromLead,
+  getSlaLabel,
+  slaColors,
+  slaTooltips,
+  slaTooltipMessageRed,
+  type LastMessageForSla,
+} from '@/lib/sla';
 import { useLanguage } from '@/components/LanguageProvider';
 
 type Stage = { id: string; name: string; order: number };
@@ -21,6 +27,7 @@ type Lead = { id: string; name: string | null; email: string | null; stage_id: s
 
 function LeadCard({
   lead,
+  lastMessage,
   isDragOverlay,
   stages,
   firstStageId,
@@ -28,13 +35,26 @@ function LeadCard({
   noNameLabel,
 }: {
   lead: Lead;
+  lastMessage?: LastMessageForSla | null;
   isDragOverlay?: boolean;
   stages?: Stage[];
   firstStageId?: string;
   onStageChange?: (leadId: string, stageId: string) => void;
   noNameLabel: string;
 }) {
-  const sla = lead.created_at ? getSlaStatus(lead.created_at) : null;
+  const sla = lead.created_at
+    ? getSlaStatusFromLead(lead, lastMessage)
+    : null;
+  const isRedFromMessage =
+    sla === 'red' &&
+    lastMessage &&
+    lastMessage.type === 'inbound' &&
+    !lastMessage.is_read;
+  const slaTitle = sla
+    ? isRedFromMessage
+      ? slaTooltipMessageRed
+      : `${getSlaLabel(lead.created_at!)} — ${slaTooltips[sla]}`
+    : '';
 
   return (
     <div
@@ -51,7 +71,7 @@ function LeadCard({
         {sla && (
           <span
             className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${slaColors[sla]}`}
-            title={`${getSlaLabel(lead.created_at!)} — ${slaTooltips[sla]}`}
+            title={slaTitle}
           />
         )}
       </div>
@@ -76,6 +96,7 @@ function LeadCard({
 
 function DraggableLeadCard({
   lead,
+  lastMessage,
   stageId,
   stages,
   firstStageId,
@@ -83,6 +104,7 @@ function DraggableLeadCard({
   noNameLabel,
 }: {
   lead: Lead;
+  lastMessage?: LastMessageForSla | null;
   stageId: string;
   stages: Stage[];
   firstStageId: string;
@@ -103,6 +125,7 @@ function DraggableLeadCard({
     >
       <LeadCard
         lead={lead}
+        lastMessage={lastMessage}
         stages={stages}
         firstStageId={firstStageId}
         onStageChange={onStageChange}
@@ -119,6 +142,7 @@ function DroppableColumn({
   stages,
   moveLead,
   noNameLabel,
+  lastMessageByLeadId,
 }: {
   stage: Stage;
   leads: Lead[];
@@ -127,6 +151,7 @@ function DroppableColumn({
   moveLead: (leadId: string, stageId: string) => void;
   stages: Stage[];
   noNameLabel: string;
+  lastMessageByLeadId: Record<string, LastMessageForSla>;
 }) {
   const stageLeads = getLeadsForStage(stage.id);
   const { setNodeRef, isOver } = useDroppable({ id: `stage-${stage.id}` });
@@ -145,6 +170,7 @@ function DroppableColumn({
           <li key={lead.id}>
             <DraggableLeadCard
               lead={lead}
+              lastMessage={lastMessageByLeadId[lead.id]}
               stageId={stage.id}
               stages={stages}
               firstStageId={firstStageId}
@@ -163,24 +189,42 @@ function DroppableColumn({
   );
 }
 
-export function PipelineKanban({ stages, leads }: { stages: Stage[]; leads: Lead[] }) {
-  const router = useRouter();
+type LastMessageByLeadId = Record<string, LastMessageForSla>;
+
+export function PipelineKanban({
+  stages,
+  leads: initialLeads,
+  lastMessageByLeadId = {},
+}: {
+  stages: Stage[];
+  leads: Lead[];
+  lastMessageByLeadId?: LastMessageByLeadId;
+}) {
   const { t } = useLanguage();
   const noNameLabel = t('common.noName');
   const firstStageId = stages[0]?.id;
+
+  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+  const [moveError, setMoveError] = useState<string | null>(null);
 
   const getLeadsForStage = (stageId: string) =>
     leads.filter(
       (l) => l.stage_id === stageId || (stageId === firstStageId && !l.stage_id)
     );
 
-  async function moveLead(leadId: string, stageId: string) {
-    await fetch(`/api/leads/${leadId}`, {
+  async function moveLead(leadId: string, stageId: string): Promise<boolean> {
+    const res = await fetch(`/api/leads/${leadId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ stage_id: stageId }),
     });
-    router.refresh();
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setMoveError(data?.error ?? 'Error al mover');
+      return false;
+    }
+    setMoveError(null);
+    return true;
   }
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -196,9 +240,10 @@ export function PipelineKanban({ stages, leads }: { stages: Stage[]; leads: Lead
 
   function handleDragStart(e: DragStartEvent) {
     setActiveId(e.active.id as string);
+    setMoveError(null);
   }
 
-  function handleDragEnd(e: DragEndEvent) {
+  async function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     setActiveId(null);
     if (!over) return;
@@ -213,7 +258,20 @@ export function PipelineKanban({ stages, leads }: { stages: Stage[]; leads: Lead
       const overLead = leads.find((l) => `lead-${l.id}` === overIdStr);
       newStageId = overLead?.stage_id ?? firstStageId ?? null;
     }
-    if (newStageId) moveLead(leadId, newStageId);
+    if (!newStageId) return;
+
+    const lead = leads.find((l) => l.id === leadId);
+    if (!lead || lead.stage_id === newStageId) return;
+
+    const prevLeads = [...leads];
+    setLeads((prev) =>
+      prev.map((l) =>
+        l.id === leadId ? { ...l, stage_id: newStageId } : l
+      )
+    );
+
+    const ok = await moveLead(leadId, newStageId);
+    if (!ok) setLeads(prevLeads);
   }
 
   return (
@@ -222,6 +280,11 @@ export function PipelineKanban({ stages, leads }: { stages: Stage[]; leads: Lead
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
+      {moveError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+          {moveError}
+        </div>
+      )}
       <div className="flex gap-4 overflow-x-auto pb-4">
         {stages.map((stage) => (
           <DroppableColumn
@@ -233,12 +296,20 @@ export function PipelineKanban({ stages, leads }: { stages: Stage[]; leads: Lead
             moveLead={moveLead}
             stages={stages}
             noNameLabel={noNameLabel}
+            lastMessageByLeadId={lastMessageByLeadId}
           />
         ))}
       </div>
 
       <DragOverlay>
-        {activeLead ? <LeadCard lead={activeLead} isDragOverlay noNameLabel={noNameLabel} /> : null}
+        {activeLead ? (
+          <LeadCard
+            lead={activeLead}
+            lastMessage={lastMessageByLeadId[activeLead.id]}
+            isDragOverlay
+            noNameLabel={noNameLabel}
+          />
+        ) : null}
       </DragOverlay>
     </DndContext>
   );
