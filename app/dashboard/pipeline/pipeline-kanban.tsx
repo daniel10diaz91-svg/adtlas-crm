@@ -171,6 +171,7 @@ function DroppableColumn({
   noNameLabel,
   lastMessageByLeadId,
   leadCountLabel,
+  actionLabels,
 }: {
   stage: Stage;
   leads: Lead[];
